@@ -1,0 +1,33 @@
+# Pandemic Monorepo Workspace Configuration
+
+workspace:
+  name: "pandemic"
+  version: "0.0.1"
+  
+packages:
+  - name: "pandemic-common"
+    path: "packages/pandemic-common"
+    description: "Common utilities and types"
+    
+  - name: "pandemic-core" 
+    path: "packages/pandemic-core"
+    description: "Core daemon package"
+    dependencies: ["pandemic-common"]
+    
+  - name: "pandemic-cli"
+    path: "packages/pandemic-cli" 
+    description: "CLI package for system administration"
+    dependencies: ["pandemic-common"]
+
+tools:
+  python: ">=3.10"
+  pytest: ">=7.0"
+  black: ">=23.0"
+  mypy: ">=1.0"
+
+scripts:
+  install: "make install"
+  test: "make test"
+  lint: "make lint"
+  format: "make format"
+  clean: "make clean"
