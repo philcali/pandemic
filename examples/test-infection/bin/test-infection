@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# Simple test infection that logs messages
+echo "Test infection starting..."
+
+while true; do
+    echo "$(date): Test infection is running"
+    sleep 30
+done

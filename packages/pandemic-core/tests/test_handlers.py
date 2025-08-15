@@ -64,6 +64,15 @@ class TestMessageHandler:
     @pytest.mark.asyncio
     async def test_install_infection(self, handler, mock_systemd_manager):
         """Test infection installation."""
+        from unittest.mock import AsyncMock
+        
+        # Mock source manager
+        handler.source_manager.install_from_source = AsyncMock(return_value={
+            "installationPath": "/opt/pandemic/infections/test-infection",
+            "downloadInfo": {"source": "github://test/repo@v1.0.0", "type": "github"},
+            "configInfo": {"metadata": {"name": "test-infection"}}
+        })
+        
         message = {
             "id": "test-4",
             "command": "install",
@@ -77,7 +86,8 @@ class TestMessageHandler:
         assert "infectionId" in payload
         assert payload["serviceName"] == "test-service.service"
 
-        # Verify systemd manager was called
+        # Verify managers were called
+        handler.source_manager.install_from_source.assert_called_once()
         mock_systemd_manager.create_service.assert_called_once()
 
     @pytest.mark.asyncio

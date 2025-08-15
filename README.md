@@ -75,3 +75,12 @@ The project uses Black, isort, and Flake8 for code formatting and linting:
 - **MyPy**: Optional static type checking
 
 See [LINTING.md](LINTING.md) for detailed configuration and usage.
+
+## Documentation
+
+Comprehensive documentation is available in the [docs/](docs/) directory:
+
+- **[System Design](docs/DESIGN.md)** - Architecture and design decisions
+- **[Requirements](docs/REQUIREMENTS.md)** - System requirements and specifications
+- **[Installation Sources](docs/SOURCES.md)** - Source types and configuration
+- **[Feature Designs](docs/features/)** - Detailed feature specifications

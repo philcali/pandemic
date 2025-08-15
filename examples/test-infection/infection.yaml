@@ -1,0 +1,31 @@
+metadata:
+  name: test-infection
+  version: 1.0.0
+  description: Example infection for testing pandemic system
+  author: Pandemic Team
+
+source:
+  type: github
+  url: github://pandemic-org/test-infection@v1.0.0
+
+systemd:
+  user: pandemic-test-infection
+  group: pandemic
+  working_directory: /opt/pandemic/infections/test-infection
+  environment:
+    DEBUG: "false"
+    LOG_LEVEL: "INFO"
+
+execution:
+  command: ./bin/test-infection
+  restart: always
+  restart_sec: 5
+
+resources:
+  memory_limit: 128M
+  cpu_quota: 50%
+
+security:
+  capabilities: []
+  read_only_root: true
+  no_new_privileges: true

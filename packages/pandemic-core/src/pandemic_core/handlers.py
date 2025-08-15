@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Any, Dict
 
 from .config import DaemonConfig
+from .sources import SourceManager
 from .state import StateManager
 from .systemd import SystemdManager
 
@@ -17,6 +18,7 @@ class MessageHandler:
         self.config = config
         self.state_manager = state_manager
         self.systemd_manager = SystemdManager(config)
+        self.source_manager = SourceManager(config)
         self.logger = logging.getLogger(__name__)
 
     async def handle_message(self, message: Dict[str, Any]) -> Dict[str, Any]:
@@ -145,19 +147,41 @@ class MessageHandler:
             "resources": payload.get("configOverrides", {}).get("resources", {}),
         }
 
-        # Create systemd service
-        service_name = await self.systemd_manager.create_service(infection_id, infection)
-        infection["serviceName"] = service_name
-
-        # Update state
-        infection["state"] = "installed"
+        # Add to state as installing
         self.state_manager.add_infection(infection_id, infection)
 
-        return {
-            "infectionId": infection_id,
-            "serviceName": service_name,
-            "installationPath": f"{self.config.infections_dir}/{name}",
-        }
+        try:
+            # Install from source
+            install_result = await self.source_manager.install_from_source(source, name)
+
+            # Update infection with install info
+            infection.update(
+                {
+                    "installationPath": install_result["installationPath"],
+                    "downloadInfo": install_result["downloadInfo"],
+                    "configInfo": install_result["configInfo"],
+                }
+            )
+
+            # Create systemd service
+            service_name = await self.systemd_manager.create_service(infection_id, infection)
+            infection["serviceName"] = service_name
+
+            # Update state to installed
+            infection["state"] = "installed"
+            self.state_manager.add_infection(infection_id, infection)
+
+            return {
+                "infectionId": infection_id,
+                "serviceName": service_name,
+                "installationPath": install_result["installationPath"],
+            }
+        except Exception as e:
+            # Update state to failed
+            infection["state"] = "failed"
+            infection["error"] = str(e)
+            self.state_manager.add_infection(infection_id, infection)
+            raise
 
     async def _handle_remove(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Handle infection removal."""
