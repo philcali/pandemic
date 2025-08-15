@@ -26,28 +26,25 @@ pip install -e "packages/pandemic-iam[test]"
 
 ## Configuration
 
-Create an `infection.yaml` configuration file:
+Pandemic IAM is configured through the main daemon configuration:
 
 ```yaml
-metadata:
-  name: pandemic-iam
-  version: 1.0.0
-  description: Cloud provider IAM abstraction plugin
+# /etc/pandemic/daemon.yaml
+iam:
+  providers:
+    aws:
+      enabled: true
+      region: us-east-1
+      rolesanywhere_endpoint: https://rolesanywhere.us-east-1.amazonaws.com
+      trust_anchor_arn: arn:aws:rolesanywhere:us-east-1:123456789012:trust-anchor/ta-123
+      profile_arn: arn:aws:rolesanywhere:us-east-1:123456789012:profile/profile-123
+      role_arn: arn:aws:iam::123456789012:role/PandemicRole
 
-providers:
-  aws:
-    enabled: true
-    region: us-east-1
-    rolesanywhere_endpoint: https://rolesanywhere.us-east-1.amazonaws.com
-    trust_anchor_arn: arn:aws:rolesanywhere:us-east-1:123456789012:trust-anchor/ta-123
-    profile_arn: arn:aws:rolesanywhere:us-east-1:123456789012:profile/profile-123
-    role_arn: arn:aws:iam::123456789012:role/PandemicRole
-
-certificates:
-  base_path: /etc/pandemic/certs
-  default_cert: /etc/pandemic/certs/pandemic.pem
-  default_key: /etc/pandemic/certs/pandemic.key
-  file_permissions: 0600
+  certificates:
+    base_path: /etc/pandemic/certs
+    default_cert: /etc/pandemic/certs/pandemic.pem
+    default_key: /etc/pandemic/certs/pandemic.key
+    file_permissions: 0600
 ```
 
 ## Usage
