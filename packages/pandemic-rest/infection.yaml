@@ -1,0 +1,75 @@
+metadata:
+  name: pandemic-rest
+  version: 1.0.0
+  description: HTTP REST API server for Pandemic edge computing system
+  author: Pandemic Team
+
+source:
+  type: github
+  url: github://pandemic-org/pandemic-rest@v1.0.0
+
+systemd:
+  user: pandemic-rest
+  group: pandemic
+  working_directory: /opt/pandemic/infections/pandemic-rest
+  environment:
+    PYTHONPATH: "/opt/pandemic/infections/pandemic-rest/src"
+    PANDEMIC_REST_CONFIG: "/etc/pandemic/rest/config.yaml"
+
+execution:
+  command: ./bin/pandemic-rest
+  restart: always
+  restart_sec: 10
+
+resources:
+  memory_limit: 512M
+  cpu_quota: 50%
+
+security:
+  capabilities: []
+  read_only_root: false
+  no_new_privileges: true
+
+# REST API Configuration
+server:
+  host: 0.0.0.0
+  port: 8443
+  workers: 4
+
+tls:
+  enabled: true
+  cert_file: /etc/pandemic/certs/rest-api.crt
+  key_file: /etc/pandemic/certs/rest-api.key
+
+daemon:
+  socket_path: /var/run/pandemic.sock
+  connection_pool_size: 10
+  request_timeout: 30
+
+auth:
+  jwt_secret: ${JWT_SECRET}
+  jwt_expiry: 3600
+
+user_management:
+  provider: local
+  local:
+    users_file: /etc/pandemic/rest/users.yaml
+    role_mapping:
+      admin: admin
+      operator: operator
+      user: read-only
+
+cors:
+  enabled: true
+  origins:
+    - https://pandemic-ui.local
+    - https://localhost:3000
+
+security:
+  rate_limit: 100/minute
+  max_request_size: 10MB
+
+logging:
+  level: INFO
+  access_log: true
+  audit_log: /var/log/pandemic/rest-audit.log

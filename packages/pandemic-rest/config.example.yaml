@@ -1,0 +1,61 @@
+# Pandemic REST API Configuration Example
+# Copy to /etc/pandemic/rest/config.yaml and customize
+
+server:
+  host: 0.0.0.0
+  port: 8443
+  workers: 4
+
+tls:
+  enabled: true
+  cert_file: /etc/pandemic/certs/rest-api.crt
+  key_file: /etc/pandemic/certs/rest-api.key
+
+daemon:
+  socket_path: /var/run/pandemic.sock
+  connection_pool_size: 10
+  request_timeout: 30
+
+auth:
+  jwt_secret: your-secret-key-here-change-in-production
+  jwt_expiry: 3600
+
+user_management:
+  provider: local  # local, ldap, oidc
+  
+  # Local users configuration
+  local:
+    users_file: /etc/pandemic/rest/users.yaml
+    role_mapping:
+      admin: admin
+      operator: operator
+      user: read-only
+  
+  # LDAP configuration (when provider: ldap)
+  ldap:
+    server: ldap://ldap.company.com:389
+    bind_dn: cn=pandemic,ou=service,dc=company,dc=com
+    bind_password: ${LDAP_PASSWORD}
+    user_base: ou=users,dc=company,dc=com
+    user_filter: (uid={username})
+    group_base: ou=groups,dc=company,dc=com
+    group_filter: (member={user_dn})
+    role_mapping:
+      pandemic-admins: admin
+      pandemic-operators: operator
+      pandemic-users: read-only
+
+cors:
+  enabled: true
+  origins:
+    - https://pandemic-ui.local
+    - https://localhost:3000
+
+security:
+  rate_limit: 100/minute
+  max_request_size: 10MB
+
+logging:
+  level: INFO
+  access_log: true
+  audit_log: /var/log/pandemic/rest-audit.log

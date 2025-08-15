@@ -41,3 +41,4 @@ Any breaking changes or migration steps.
 
 - [Template](template.md) - Feature design template
 - [Pandemic IAM](pandemic-iam.md) - Cloud provider abstraction plugin
+- [Pandemic REST](pandemic-rest.md) - HTTP API plugin for web/remote access

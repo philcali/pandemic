@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+
+"""Pandemic REST API server executable."""
+
+import asyncio
+import os
+import sys
+from pathlib import Path
+
+# Add src directory to Python path
+src_dir = Path(__file__).parent.parent / "src"
+sys.path.insert(0, str(src_dir))
+
+import uvicorn
+import yaml
+from pandemic_rest import create_app
+
+
+def load_config(config_path: str) -> dict:
+    """Load configuration from YAML file."""
+    config_file = Path(config_path)
+    
+    if not config_file.exists():
+        # Return default configuration
+        return {
+            "server": {"host": "0.0.0.0", "port": 8443},
+            "daemon": {"socket_path": "/var/run/pandemic.sock"},
+            "auth": {"jwt_secret": "dev-secret", "jwt_expiry": 3600},
+            "user_management": {"provider": "local"},
+            "cors": {"enabled": True},
+            "logging": {"level": "INFO"}
+        }
+    
+    with open(config_file) as f:
+        return yaml.safe_load(f)
+
+
+def main():
+    """Main entry point."""
+    config_path = os.getenv("PANDEMIC_REST_CONFIG", "/etc/pandemic/rest/config.yaml")
+    config = load_config(config_path)
+    
+    # Create FastAPI app
+    app = create_app(config)
+    
+    # Get server configuration
+    server_config = config.get("server", {})
+    host = server_config.get("host", "0.0.0.0")
+    port = server_config.get("port", 8443)
+    workers = server_config.get("workers", 1)
+    
+    # TLS configuration
+    tls_config = config.get("tls", {})
+    ssl_keyfile = tls_config.get("key_file") if tls_config.get("enabled") else None
+    ssl_certfile = tls_config.get("cert_file") if tls_config.get("enabled") else None
+    
+    # Run server
+    uvicorn.run(
+        app,
+        host=host,
+        port=port,
+        ssl_keyfile=ssl_keyfile,
+        ssl_certfile=ssl_certfile,
+        workers=workers if workers > 1 else None,
+        log_level=config.get("logging", {}).get("level", "info").lower()
+    )
+
+
+if __name__ == "__main__":
+    main()

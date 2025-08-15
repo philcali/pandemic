@@ -1,0 +1,30 @@
+[project]
+name = "pandemic-rest"
+version = "0.0.1"
+description = "HTTP REST API plugin for Pandemic edge computing system"
+readme = "README.md"
+license = {text = "MIT"}
+keywords = ["rest", "api", "http", "web", "fastapi"]
+authors = [{name = "Pandemic Team"}]
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "pydantic>=2.0.0",
+    "python-jose[cryptography]>=3.3.0",
+    "python-multipart>=0.0.6",
+    "websockets>=12.0",
+    "pandemic-common==0.0.1"
+]
+
+[project.optional-dependencies]
+test = ["pytest>=7.0", "pytest-asyncio>=0.21", "pytest-cov>=4.0", "httpx>=0.25.0"]
+dev = ["black>=23.0", "isort>=5.0", "mypy>=1.0", "flake8>=6.0"]
+ldap = ["python-ldap>=3.4.0"]
+oidc = ["authlib>=1.2.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"

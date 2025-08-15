@@ -1,0 +1,28 @@
+# Example users file for local authentication
+# Copy to /etc/pandemic/rest/users.yaml and customize
+# Generate password hashes with: echo -n "password" | sha256sum
+
+users:
+  admin:
+    password_hash: "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f"  # secret123
+    email: admin@company.com
+    full_name: System Administrator
+    roles:
+      - admin
+  
+  operator:
+    password_hash: "5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5"  # password
+    email: operator@company.com
+    full_name: System Operator
+    roles:
+      - operator
+  
+  user:
+    password_hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"  # (empty password)
+    email: user@company.com
+    full_name: Read Only User
+    roles:
+      - user
+
+# To generate password hash:
+# echo -n "your-password" | sha256sum
