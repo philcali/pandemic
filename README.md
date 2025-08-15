@@ -13,7 +13,8 @@ pandemic/
 ├── packages/
 │   ├── pandemic-common/     # Shared types and utilities
 │   ├── pandemic-core/       # Core daemon package  
-│   └── pandemic-cli/        # CLI client package
+│   ├── pandemic-cli/        # CLI client package
+│   └── pandemic-iam/        # Cloud provider IAM plugin
 ```
 
 ## Packages
@@ -26,6 +27,9 @@ Core daemon that manages infection lifecycle through Unix domain sockets and sys
 
 ### pandemic-cli
 Command-line interface for interacting with the pandemic daemon.
+
+### pandemic-iam
+Cloud provider IAM abstraction plugin for certificate-based authentication.
 
 ## Quick Start
 

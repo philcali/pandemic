@@ -1,0 +1,26 @@
+[project]
+name = "pandemic-iam"
+version = "0.0.1"
+description = "Cloud provider IAM abstraction plugin for Pandemic"
+readme = "README.md"
+license = {text = "MIT"}
+keywords = ["iam", "cloud", "certificates", "authentication"]
+authors = [{name = "Pandemic Team"}]
+dependencies = [
+    "cryptography>=41.0.0",
+    "boto3>=1.28.0",
+    "requests>=2.28.0",
+    "pyyaml>=6.0",
+    "pandemic-common==0.0.1"
+]
+
+[project.optional-dependencies]
+test = ["pytest>=7.0", "pytest-asyncio>=0.21", "pytest-cov>=4.0"]
+dev = ["black>=23.0", "isort>=5.0", "mypy>=1.0", "flake8>=6.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
