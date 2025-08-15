@@ -1,0 +1,45 @@
+# Pandemic IAM Metadata Service Configuration Example
+# Copy to /etc/pandemic/iam/config.yaml and customize
+
+# IMDSv2-style metadata server configuration
+metadata_server:
+  host: 169.254.169.254  # AWS IMDS standard address (configurable)
+  port: 80               # Standard HTTP port (requires CAP_NET_BIND_SERVICE)
+
+providers:
+  aws:
+    enabled: true
+    region: us-east-1
+    rolesanywhere_endpoint: https://rolesanywhere.us-east-1.amazonaws.com
+    trust_anchor_arn: arn:aws:rolesanywhere:us-east-1:123456789012:trust-anchor/ta-abc123
+    profile_arn: arn:aws:rolesanywhere:us-east-1:123456789012:profile/profile-def456
+    role_arn: arn:aws:iam::123456789012:role/PandemicRole
+    
+  azure:
+    enabled: false
+    tenant_id: your-tenant-id-here
+    certificate_auth_endpoint: https://login.microsoftonline.com
+    
+  gcp:
+    enabled: false
+    project_id: your-project-id-here
+    certificate_auth_endpoint: https://oauth2.googleapis.com
+
+certificates:
+  base_path: /etc/pandemic/certs
+  ca_bundle: /etc/pandemic/certs/ca-bundle.pem
+  default_cert: /etc/pandemic/certs/pandemic-iam.pem
+  default_key: /etc/pandemic/certs/pandemic-iam.key
+  file_permissions: 0600
+  renewal_days: 30
+
+security:
+  max_session_duration: 43200    # 12 hours max token TTL
+  credential_cache_ttl: 300      # 5 minutes credential cache
+  token_cleanup_interval: 300    # 5 minutes token cleanup
+  audit_all_operations: true
+
+logging:
+  level: INFO
+  structured: true
+  audit_file: /var/log/pandemic/iam-audit.log

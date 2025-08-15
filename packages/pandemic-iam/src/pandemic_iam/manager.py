@@ -42,7 +42,6 @@ class IAMManager:
         self, provider: str, certificate_path: str, private_key_path: str, duration: int = 3600
     ) -> Credentials:
         """Get temporary credentials using certificate authentication."""
-
         if provider not in self.providers:
             raise ValueError(f"Provider not available: {provider}")
 

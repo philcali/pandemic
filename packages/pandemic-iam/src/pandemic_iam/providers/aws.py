@@ -40,7 +40,6 @@ class AWSProvider(CloudProvider):
         self, certificate_path: Path, private_key_path: Path, duration: int = 3600
     ) -> Credentials:
         """Exchange certificate for AWS temporary credentials via IAM Roles Anywhere."""
-
         # Validate certificate and key
         if not self.validate_certificate(certificate_path):
             raise ValueError(f"Invalid certificate: {certificate_path}")
@@ -121,7 +120,6 @@ class AWSProvider(CloudProvider):
         self, client, certificate: x509.Certificate, private_key, duration: int
     ) -> Dict[str, Any]:
         """Create IAM Roles Anywhere session with proper request signing."""
-
         # Create session request payload
         request_payload = {
             "profileArn": self.profile_arn,

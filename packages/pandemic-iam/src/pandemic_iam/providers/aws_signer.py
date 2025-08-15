@@ -25,7 +25,6 @@ class IAMRolesAnywhereSigner:
         self, method: str, url: str, headers: Dict[str, str], payload: str, region: str
     ) -> Dict[str, str]:
         """Sign AWS IAM Roles Anywhere request with X.509 certificate."""
-
         # Parse URL components
         from urllib.parse import urlparse
 
@@ -49,14 +48,14 @@ class IAMRolesAnywhereSigner:
 
         # Create string to sign
         credential_scope = f"{date_stamp}/{region}/{self.service}/aws4_request"
-        string_to_sign = f"{self.algorithm}\n{amz_date}\n{credential_scope}\n{hashlib.sha256(canonical_request.encode()).hexdigest()}"
+        string_to_sign = f"{self.algorithm}\n{amz_date}\n{credential_scope}\n{hashlib.sha256(canonical_request.encode()).hexdigest()}"  # noqa: E501
 
         # Sign with private key
         signature = self._sign_string(string_to_sign)
 
         # Create authorization header
         signed_headers = ";".join(sorted(headers.keys()))
-        authorization = f"{self.algorithm} Credential=X509Certificate/{credential_scope}, SignedHeaders={signed_headers}, Signature={signature}"
+        authorization = f"{self.algorithm} Credential=X509Certificate/{credential_scope}, SignedHeaders={signed_headers}, Signature={signature}"  # noqa: E501
 
         headers["Authorization"] = authorization
         return headers
@@ -72,7 +71,6 @@ class IAMRolesAnywhereSigner:
         self, method: str, path: str, query_string: str, headers: Dict[str, str], payload: str
     ) -> str:
         """Create canonical request string."""
-
         # Canonical URI
         canonical_uri = quote(path, safe="/")
 
@@ -90,7 +88,7 @@ class IAMRolesAnywhereSigner:
         # Payload hash
         payload_hash = hashlib.sha256(payload.encode()).hexdigest()
 
-        return f"{method}\n{canonical_uri}\n{canonical_query_string}\n{canonical_headers}\n{signed_headers}\n{payload_hash}"
+        return f"{method}\n{canonical_uri}\n{canonical_query_string}\n{canonical_headers}\n{signed_headers}\n{payload_hash}"  # noqa: E501
 
     def _sign_string(self, string_to_sign: str) -> str:
         """Sign string using private key."""

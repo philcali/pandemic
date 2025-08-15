@@ -20,8 +20,8 @@ class TestIAMManager:
                 "aws": {
                     "enabled": True,
                     "region": "us-east-1",
-                    "trust_anchor_arn": "arn:aws:rolesanywhere:us-east-1:123456789012:trust-anchor/ta-123",
-                    "profile_arn": "arn:aws:rolesanywhere:us-east-1:123456789012:profile/profile-123",
+                    "trust_anchor_arn": "arn:aws:rolesanywhere:us-east-1:123456789012:trust-anchor/ta-123",  # noqa: E501
+                    "profile_arn": "arn:aws:rolesanywhere:us-east-1:123456789012:profile/profile-123",  # noqa: E501
                     "role_arn": "arn:aws:iam::123456789012:role/PandemicRole",
                 },
                 "azure": {"enabled": False},
