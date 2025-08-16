@@ -40,5 +40,6 @@ Any breaking changes or migration steps.
 ## Current Features
 
 - [Template](template.md) - Feature design template
-- [Pandemic IAM](pandemic-iam.md) - Cloud provider abstraction plugin
+- [Pandemic IAM](pandemic-iam.md) - IMDSv2-style cloud metadata service
 - [Pandemic REST](pandemic-rest.md) - HTTP API plugin for web/remote access
+- [Pandemic Console](pandemic-console.md) - Web-based dashboard interface

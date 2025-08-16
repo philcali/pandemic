@@ -14,7 +14,9 @@ pandemic/
 │   ├── pandemic-common/     # Shared types and utilities
 │   ├── pandemic-core/       # Core daemon package  
 │   ├── pandemic-cli/        # CLI client package
-│   └── pandemic-iam/        # Cloud provider IAM plugin
+│   ├── pandemic-iam/        # IMDSv2-style cloud metadata service
+│   ├── pandemic-rest/       # HTTP REST API server
+│   └── pandemic-console/    # Web-based dashboard interface
 ```
 
 ## Packages
@@ -29,7 +31,13 @@ Core daemon that manages infection lifecycle through Unix domain sockets and sys
 Command-line interface for interacting with the pandemic daemon.
 
 ### pandemic-iam
-Cloud provider IAM abstraction plugin for certificate-based authentication.
+IMDSv2-style cloud metadata service that provides transparent host-wide access to cloud credentials via certificate-based authentication.
+
+### pandemic-rest
+HTTP REST API server infection that exposes pandemic-core functionality via RESTful endpoints with JWT authentication.
+
+### pandemic-console
+Web-based dashboard infection built with React + TypeScript that provides a modern UI for managing infections and monitoring system health.
 
 ## Quick Start
 
@@ -45,6 +53,14 @@ pandemic
 
 # Use CLI
 pandemic-cli status
+
+# Install and start web interface (optional)
+pandemic-cli install packages/pandemic-rest --name rest-api
+pandemic-cli install packages/pandemic-console --name console
+pandemic-cli start rest-api
+pandemic-cli start console
+
+# Access web dashboard at http://localhost:3000
 ```
 
 ## Development

@@ -7,6 +7,7 @@ install:
 	pip install -e packages/pandemic-cli
 	pip install -e packages/pandemic-iam
 	pip install -e packages/pandemic-rest
+	pip install -e packages/pandemic-console
 	pip install -e .
 
 # Install with development dependencies
@@ -22,8 +23,9 @@ test-cov:
 	pytest --cov=packages/pandemic-core/src/pandemic_core \
 	       --cov=packages/pandemic-cli/src/pandemic_cli \
 	       --cov=packages/pandemic-common/src/pandemic_common \
-	       --cov=packages/pandemic-common/src/pandemic_iam \
-	       --cov=packages/pandemic-common/src/pandemic_rest \
+	       --cov=packages/pandemic-iam/src/pandemic_iam \
+	       --cov=packages/pandemic-rest/src/pandemic_rest \
+	       --cov=packages/pandemic-console/src/pandemic_console \
 	       --cov-report=term-missing --cov-report=html
 
 # Test specific package
@@ -41,6 +43,9 @@ test-iam:
 
 test-rest:
 	cd packages/pandemic-rest && pytest
+
+test-console:
+	cd packages/pandemic-console && pytest
 
 # Format all code
 format:

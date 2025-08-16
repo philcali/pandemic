@@ -1,0 +1,27 @@
+# Pandemic Console Configuration Example
+# Copy to /etc/pandemic/console/config.yaml and customize
+
+server:
+  host: 0.0.0.0
+  port: 3000
+  workers: 1
+
+api:
+  base_url: https://localhost:8443/api/v1
+  timeout: 30
+  retry_attempts: 3
+
+ui:
+  theme: light
+  auto_refresh_interval: 5000
+  log_lines_default: 100
+  log_lines_max: 1000
+
+security:
+  session_timeout: 3600
+  csrf_protection: true
+  content_security_policy: true
+
+logging:
+  level: INFO
+  access_log: true
