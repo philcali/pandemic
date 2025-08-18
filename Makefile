@@ -2,17 +2,17 @@
 
 # Install all packages in development mode
 install:
-	pip install -e packages/pandemic-common
-	pip install -e packages/pandemic-core
-	pip install -e packages/pandemic-cli
-	pip install -e packages/pandemic-iam
-	pip install -e packages/pandemic-rest
-	pip install -e packages/pandemic-console
-	pip install -e .
+	pip3 install -e packages/pandemic-common
+	pip3 install -e packages/pandemic-core
+	pip3 install -e packages/pandemic-cli
+	pip3 install -e packages/pandemic-iam
+	pip3 install -e packages/pandemic-rest
+	pip3 install -e packages/pandemic-console
+	pip3 install -e .
 
 # Install with development dependencies
 install-dev: install
-	pip install -e ".[dev]"
+	pip3 install -e ".[dev]"
 
 # Run tests for all packages
 test:
@@ -50,7 +50,7 @@ test-console:
 # Format all code
 format:
 	@echo "🎨 Formatting code with black..."
-	black packages/*/src packages/*/tests
+	black --extend-exclude node_modules packages/*/src packages/*/tests
 	@echo "📦 Sorting imports with isort..."
 	isort packages/*/src packages/*/tests
 	@echo "✅ Formatting complete!"
@@ -58,13 +58,13 @@ format:
 # Check formatting without making changes
 format-check:
 	@echo "🔍 Checking code formatting..."
-	black --check --diff packages/*/src packages/*/tests
+	black --check --diff --extend-exclude node_modules packages/*/src packages/*/tests
 	isort --check-only --diff packages/*/src packages/*/tests
 
 # Lint all packages
 lint:
 	@echo "🔍 Running flake8..."
-	flake8 packages/*/src packages/*/tests
+	flake8 --extend-exclude "*/node_modules/*" packages/*/src packages/*/tests
 	@echo "✅ Linting complete!"
 
 # Type check with mypy (separate command for now)
@@ -90,9 +90,11 @@ clean:
 
 # Build all packages
 build:
-	cd packages/pandemic-common && python -m build
-	cd packages/pandemic-core && python -m build
-	cd packages/pandemic-client && python -m build
+	cd packages/pandemic-common && python3 -m build
+	cd packages/pandemic-core && python3 -m build
+	cd packages/pandemic-client && python3 -m build
+	cd packages/pandemic-iam && python3 -m build
+	cd packages/pandemic-rest && python3 -m build
 
 # Development workflow
 dev-setup: install-dev

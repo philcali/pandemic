@@ -2,12 +2,12 @@
 
 import logging
 from pathlib import Path
-from typing import Dict, Any
-import pkg_resources
+from typing import Any, Dict
 
+import pkg_resources
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 
 def create_app(config: Dict[str, Any]) -> FastAPI:
@@ -17,24 +17,24 @@ def create_app(config: Dict[str, Any]) -> FastAPI:
         description="Web-based dashboard for Pandemic edge computing system",
         version="1.0.0",
         docs_url=None,  # Disable docs for production
-        redoc_url=None
+        redoc_url=None,
     )
-    
+
     # Get console files directory from package data
     try:
-        console_dir = Path(pkg_resources.resource_filename('pandemic_console', 'console'))
-        
+        console_dir = Path(pkg_resources.resource_filename("pandemic_console", "console"))
+
         # Mount React's static files at /static (to match React's expectations)
         static_dir = console_dir / "static"
         if static_dir.exists():
             app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
-        
+
         @app.get("/")
         async def serve_react_app():
             """Serve React application."""
             index_file = console_dir / "index.html"
             return FileResponse(str(index_file))
-        
+
         @app.get("/{path:path}")
         async def serve_react_routes(path: str):
             """Serve React routes (SPA routing)."""
@@ -43,7 +43,7 @@ def create_app(config: Dict[str, Any]) -> FastAPI:
                 index_file = console_dir / "index.html"
                 return FileResponse(str(index_file))
             return {"error": "Not found"}
-            
+
     except (ImportError, FileNotFoundError):
         # Fallback for development when console files aren't built
         @app.get("/")
@@ -56,19 +56,19 @@ def create_app(config: Dict[str, Any]) -> FastAPI:
                     "2. npm install",
                     "3. npm run build",
                     "4. pip install -e . (to include console files)",
-                    "5. Restart the console service"
-                ]
+                    "5. Restart the console service",
+                ],
             }
-    
+
     @app.get("/api/health")
     async def health_check():
         """Health check endpoint."""
         return {"status": "healthy", "service": "pandemic-console"}
-    
+
     # Setup logging
     logging.basicConfig(
         level=getattr(logging, config.get("logging", {}).get("level", "INFO")),
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
-    
+
     return app
