@@ -12,7 +12,7 @@ install:
 
 # Install with development dependencies
 install-dev: install
-	pip3 install -e ".[dev]"
+	pip3 install -e ".[dev,test]"
 
 # Run tests for all packages
 test:
