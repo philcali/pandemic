@@ -23,7 +23,7 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: 18
+        node-version: 24
 
     - name: Install dependencies
       run: |
@@ -37,12 +37,7 @@ jobs:
 
     - name: Build packages
       run: |
-        python -m build packages/pandemic-common
-        python -m build packages/pandemic-core
-        python -m build packages/pandemic-cli
-        python -m build packages/pandemic-iam
-        python -m build packages/pandemic-rest
-        python -m build packages/pandemic-console
+        make build
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
