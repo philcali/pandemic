@@ -2,7 +2,7 @@
  * Custom hook for API data fetching with loading and error states
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface UseApiState<T> {
   data: T | null;
@@ -13,13 +13,12 @@ interface UseApiState<T> {
 
 export function useApi<T>(
   apiCall: () => Promise<T>,
-  dependencies: any[] = []
 ): UseApiState<T> {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -30,11 +29,11 @@ export function useApi<T>(
     } finally {
       setLoading(false);
     }
-  };
+  }, [apiCall]);
 
   useEffect(() => {
     fetchData();
-  }, dependencies);
+  }, [fetchData]);
 
   return {
     data,
@@ -47,13 +46,12 @@ export function useApi<T>(
 export function usePolling<T>(
   apiCall: () => Promise<T>,
   interval: number = 5000,
-  dependencies: any[] = []
 ): UseApiState<T> {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       if (loading) setError(null);
       const result = await apiCall();
@@ -63,14 +61,14 @@ export function usePolling<T>(
       setError(err.response?.data?.detail || err.message || 'An error occurred');
       if (loading) setLoading(false);
     }
-  };
+  }, [apiCall, loading]);
 
   useEffect(() => {
     fetchData();
     const intervalId = setInterval(fetchData, interval);
     
     return () => clearInterval(intervalId);
-  }, dependencies);
+  }, [fetchData, interval]);
 
   return {
     data,
