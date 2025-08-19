@@ -4,10 +4,7 @@ import asyncio
 import json
 import logging
 import os
-import socket
-import uuid
 from pathlib import Path
-from typing import Any, Dict, Optional
 
 from .config import DaemonConfig
 from .events import EventBusManager
@@ -22,7 +19,11 @@ class PandemicDaemon:
         self.config = config
         self.logger = logging.getLogger(__name__)
         self.state_manager = StateManager(config)
-        self.event_bus = EventBusManager(config.events_dir) if config.event_bus_enabled else None
+        self.event_bus = (
+            EventBusManager(config.events_dir, config.event_rate_limit, config.event_burst_size)
+            if config.event_bus_enabled
+            else None
+        )
         self.message_handler = MessageHandler(config, self.state_manager, self.event_bus)
         self.server = None
         self.running = False
