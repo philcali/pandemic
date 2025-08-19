@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import os
+import time
 import uuid
 from dataclasses import asdict, dataclass
 from datetime import datetime
@@ -47,12 +48,40 @@ class Event:
         return cls(**json.loads(data))
 
 
+class RateLimiter:
+    """Token bucket rate limiter for event publishing."""
+    
+    def __init__(self, max_events_per_second: int, burst_size: int):
+        self.max_events_per_second = max_events_per_second
+        self.burst_size = burst_size
+        self.tokens = burst_size
+        self.last_refill = time.time()
+    
+    def allow_event(self) -> bool:
+        """Check if an event is allowed under rate limit."""
+        now = time.time()
+        
+        # Refill tokens based on time elapsed
+        elapsed = now - self.last_refill
+        tokens_to_add = elapsed * self.max_events_per_second
+        self.tokens = min(self.burst_size, self.tokens + tokens_to_add)
+        self.last_refill = now
+        
+        # Check if we have tokens available
+        if self.tokens >= 1:
+            self.tokens -= 1
+            return True
+        
+        return False
+
+
 class EventSocket:
     """Manages a single event socket for publishing/subscribing."""
 
-    def __init__(self, socket_path: str, source_id: str):
+    def __init__(self, socket_path: str, source_id: str, rate_limiter: Optional[RateLimiter] = None):
         self.socket_path = socket_path
         self.source_id = source_id
+        self.rate_limiter = rate_limiter
         self.server: Optional[asyncio.Server] = None
         self.subscribers: WeakSet = WeakSet()
         self.logger = logging.getLogger(f"{__name__}.{source_id}")
@@ -70,7 +99,7 @@ class EventSocket:
         )
 
         # Set socket permissions
-        os.chmod(socket_path, 0o600)
+        os.chmod(socket_path, 0o660)
 
         self.logger.debug(f"Event socket started: {socket_path}")
 
@@ -88,6 +117,11 @@ class EventSocket:
 
     async def publish(self, event: Event):
         """Publish event to all subscribers."""
+        # Apply rate limiting
+        if self.rate_limiter and not self.rate_limiter.allow_event():
+            self.logger.warning(f"Rate limit exceeded for {self.source_id}, dropping event")
+            return
+        
         if not self.subscribers:
             return
 
@@ -132,8 +166,11 @@ class EventSocket:
 class EventBusManager:
     """Manages event sockets and routing for the pandemic daemon."""
 
-    def __init__(self, events_dir: str = "/var/run/pandemic/events"):
+    def __init__(self, events_dir: str = "/var/run/pandemic/events", 
+                 rate_limit: int = 100, burst_size: int = 200):
         self.events_dir = events_dir
+        self.rate_limit = rate_limit
+        self.burst_size = burst_size
         self.sockets: Dict[str, EventSocket] = {}
         self.logger = logging.getLogger(__name__)
 
@@ -160,7 +197,13 @@ class EventBusManager:
             return self.sockets[source_id]
 
         socket_path = os.path.join(self.events_dir, f"{source_id}.sock")
-        event_socket = EventSocket(socket_path, source_id)
+        
+        # Create rate limiter for non-core sources
+        rate_limiter = None
+        if source_id != "core":
+            rate_limiter = RateLimiter(self.rate_limit, self.burst_size)
+        
+        event_socket = EventSocket(socket_path, source_id, rate_limiter)
 
         await event_socket.start()
         self.sockets[source_id] = event_socket
