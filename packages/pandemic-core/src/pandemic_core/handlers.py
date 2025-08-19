@@ -89,15 +89,15 @@ class MessageHandler:
         """Handle event subscription request."""
         infection_id = payload.get("infectionId")
         subscriptions = payload.get("subscriptions", [])
-        
+
         if not infection_id:
             raise ValueError("infectionId is required")
-        
+
         # Validate infection exists
         infection = self.state_manager.get_infection(infection_id)
         if not infection:
             raise ValueError(f"Infection not found: {infection_id}")
-        
+
         # Store subscriptions
         self.subscriptions[infection_id] = {}
         for sub in subscriptions:
@@ -105,40 +105,39 @@ class MessageHandler:
             pattern = sub.get("pattern")
             if source and pattern:
                 self.subscriptions[infection_id][source] = pattern
-        
-        self.logger.debug(f"Updated subscriptions for {infection_id}: {len(subscriptions)} subscriptions")
-        
+
+        self.logger.debug(
+            f"Updated subscriptions for {infection_id}: {len(subscriptions)} subscriptions"
+        )
+
         return {
             "status": "subscribed",
             "infectionId": infection_id,
-            "subscriptionCount": len(subscriptions)
+            "subscriptionCount": len(subscriptions),
         }
 
     async def _handle_unsubscribe_events(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Handle event unsubscription request."""
         infection_id = payload.get("infectionId")
         subscriptions = payload.get("subscriptions", [])
-        
+
         if not infection_id:
             raise ValueError("infectionId is required")
-        
+
         if infection_id in self.subscriptions:
             # Remove specific subscriptions
             for sub in subscriptions:
                 source = sub.get("source")
                 if source in self.subscriptions[infection_id]:
                     del self.subscriptions[infection_id][source]
-            
+
             # Clean up if no subscriptions left
             if not self.subscriptions[infection_id]:
                 del self.subscriptions[infection_id]
-        
+
         self.logger.debug(f"Removed subscriptions for {infection_id}")
-        
-        return {
-            "status": "unsubscribed",
-            "infectionId": infection_id
-        }
+
+        return {"status": "unsubscribed", "infectionId": infection_id}
 
     async def _handle_health(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Handle health check."""
@@ -213,9 +212,11 @@ class MessageHandler:
 
         # Add to state as installing
         self.state_manager.add_infection(infection_id, infection)
-        
+
         # Publish installing event
-        await self._publish_event("infection.installing", {"infectionId": infection_id, "name": name})
+        await self._publish_event(
+            "infection.installing", {"infectionId": infection_id, "name": name}
+        )
 
         try:
             # Install from source
@@ -237,13 +238,15 @@ class MessageHandler:
             # Update state to installed
             infection["state"] = "installed"
             self.state_manager.add_infection(infection_id, infection)
-            
+
             # Create event socket for infection
             if self.event_bus:
                 await self.event_bus.create_event_socket(infection_id)
-            
+
             # Publish installed event
-            await self._publish_event("infection.installed", {"infectionId": infection_id, "name": name})
+            await self._publish_event(
+                "infection.installed", {"infectionId": infection_id, "name": name}
+            )
 
             return {
                 "infectionId": infection_id,
@@ -255,9 +258,11 @@ class MessageHandler:
             infection["state"] = "failed"
             infection["error"] = str(e)
             self.state_manager.add_infection(infection_id, infection)
-            
+
             # Publish failed event
-            await self._publish_event("infection.failed", {"infectionId": infection_id, "error": str(e)})
+            await self._publish_event(
+                "infection.failed", {"infectionId": infection_id, "error": str(e)}
+            )
             raise
 
     async def _handle_remove(self, payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -295,7 +300,7 @@ class MessageHandler:
 
         # Remove from state
         self.state_manager.remove_infection(infection_id)
-        
+
         # Publish removed event
         await self._publish_event("infection.removed", {"infectionId": infection_id})
 
@@ -317,7 +322,7 @@ class MessageHandler:
 
         await self.systemd_manager.start_service(service_name)
         self.state_manager.update_infection_state(infection_id, "running")
-        
+
         # Publish started event
         await self._publish_event("infection.started", {"infectionId": infection_id})
 
@@ -339,7 +344,7 @@ class MessageHandler:
 
         await self.systemd_manager.stop_service(service_name)
         self.state_manager.update_infection_state(infection_id, "stopped")
-        
+
         # Publish stopped event
         await self._publish_event("infection.stopped", {"infectionId": infection_id})
 
@@ -361,7 +366,7 @@ class MessageHandler:
 
         await self.systemd_manager.restart_service(service_name)
         self.state_manager.update_infection_state(infection_id, "running")
-        
+
         # Publish restarted event
         await self._publish_event("infection.restarted", {"infectionId": infection_id})
 
