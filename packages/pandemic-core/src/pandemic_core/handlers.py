@@ -3,7 +3,7 @@
 import logging
 import uuid
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from .config import DaemonConfig
 from .sources import SourceManager
@@ -14,11 +14,12 @@ from .systemd import SystemdManager
 class MessageHandler:
     """Handles incoming messages and routes to appropriate operations."""
 
-    def __init__(self, config: DaemonConfig, state_manager: StateManager):
+    def __init__(self, config: DaemonConfig, state_manager: StateManager, event_bus=None):
         self.config = config
         self.state_manager = state_manager
         self.systemd_manager = SystemdManager(config)
         self.source_manager = SourceManager(config)
+        self.event_bus = event_bus
         self.logger = logging.getLogger(__name__)
 
     async def handle_message(self, message: Dict[str, Any]) -> Dict[str, Any]:
@@ -65,6 +66,11 @@ class MessageHandler:
         except Exception as e:
             self.logger.error(f"Error handling message: {e}")
             return self._error_response(message.get("id", str(uuid.uuid4())), str(e))
+
+    async def _publish_event(self, event_type: str, payload: Dict[str, Any]):
+        """Publish event to event bus if available."""
+        if self.event_bus:
+            await self.event_bus.publish_event("core", event_type, payload)
 
     def _error_response(self, message_id: str, error: str) -> Dict[str, Any]:
         """Create error response."""
@@ -150,6 +156,11 @@ class MessageHandler:
         # Add to state as installing
         self.state_manager.add_infection(infection_id, infection)
 
+        # Publish installing event
+        await self._publish_event(
+            "infection.installing", {"infectionId": infection_id, "name": name}
+        )
+
         try:
             # Install from source
             install_result = await self.source_manager.install_from_source(source, name)
@@ -171,6 +182,15 @@ class MessageHandler:
             infection["state"] = "installed"
             self.state_manager.add_infection(infection_id, infection)
 
+            # Create event socket for infection
+            if self.event_bus:
+                await self.event_bus.create_event_socket(infection_id)
+
+            # Publish installed event
+            await self._publish_event(
+                "infection.installed", {"infectionId": infection_id, "name": name}
+            )
+
             return {
                 "infectionId": infection_id,
                 "serviceName": service_name,
@@ -181,6 +201,11 @@ class MessageHandler:
             infection["state"] = "failed"
             infection["error"] = str(e)
             self.state_manager.add_infection(infection_id, infection)
+
+            # Publish failed event
+            await self._publish_event(
+                "infection.failed", {"infectionId": infection_id, "error": str(e)}
+            )
             raise
 
     async def _handle_remove(self, payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -202,6 +227,10 @@ class MessageHandler:
             await self.systemd_manager.remove_service(service_name)
             removed_services.append(service_name)
 
+        # Remove event socket
+        if self.event_bus:
+            await self.event_bus.remove_event_socket(infection_id)
+
         # Remove files if cleanup requested
         if payload.get("cleanup", True):
             infection_path = f"{self.config.infections_dir}/{infection['name']}"
@@ -210,6 +239,9 @@ class MessageHandler:
 
         # Remove from state
         self.state_manager.remove_infection(infection_id)
+
+        # Publish removed event
+        await self._publish_event("infection.removed", {"infectionId": infection_id})
 
         return {"removedFiles": removed_files, "removedServices": removed_services}
 
@@ -230,6 +262,9 @@ class MessageHandler:
         await self.systemd_manager.start_service(service_name)
         self.state_manager.update_infection_state(infection_id, "running")
 
+        # Publish started event
+        await self._publish_event("infection.started", {"infectionId": infection_id})
+
         return {"status": "started", "infectionId": infection_id}
 
     async def _handle_stop(self, payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -248,6 +283,9 @@ class MessageHandler:
 
         await self.systemd_manager.stop_service(service_name)
         self.state_manager.update_infection_state(infection_id, "stopped")
+
+        # Publish stopped event
+        await self._publish_event("infection.stopped", {"infectionId": infection_id})
 
         return {"status": "stopped", "infectionId": infection_id}
 
@@ -268,6 +306,9 @@ class MessageHandler:
         await self.systemd_manager.restart_service(service_name)
         self.state_manager.update_infection_state(infection_id, "running")
 
+        # Publish restarted event
+        await self._publish_event("infection.restarted", {"infectionId": infection_id})
+
         return {"status": "restarted", "infectionId": infection_id}
 
     async def _handle_get_config(self, payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -284,6 +325,8 @@ class MessageHandler:
                     "socketPath": self.config.socket_path,
                     "infectionsDir": self.config.infections_dir,
                     "logLevel": self.config.log_level,
+                    "eventBusEnabled": self.config.event_bus_enabled,
+                    "eventsDir": self.config.events_dir,
                 }
             }
 
