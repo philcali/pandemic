@@ -4,7 +4,7 @@ import asyncio
 import logging
 import subprocess
 from pathlib import Path
-from typing import Any, Dict 
+from typing import Any, Dict
 
 from .config import DaemonConfig
 
