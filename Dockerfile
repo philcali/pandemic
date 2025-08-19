@@ -9,7 +9,7 @@ RUN npm ci --only=production
 COPY packages/pandemic-console/src/frontend/ ./
 RUN npm run build
 
-FROM python:3.11-slim AS python-builder
+FROM python:3.13-slim AS python-builder
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -26,7 +26,7 @@ COPY packages/ packages/
 COPY --from=frontend-builder /app/frontend/build packages/pandemic-console/src/pandemic_console/console/
 RUN for pkg in packages/*/; do python -m build "$pkg"; done
 
-FROM python:3.11-slim AS runtime
+FROM python:3.13-slim AS runtime
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
