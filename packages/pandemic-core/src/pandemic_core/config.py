@@ -24,6 +24,12 @@ class DaemonConfig:
     log_level: str = "INFO"
     structured_logging: bool = True
 
+    # Event bus configuration
+    event_bus_enabled: bool = True
+    events_dir: str = "/var/run/pandemic/events"
+    event_rate_limit: int = 100
+    event_burst_size: int = 200
+
     def __post_init__(self):
         if self.allowed_sources is None:
             self.allowed_sources = []
@@ -43,6 +49,7 @@ class DaemonConfig:
         storage_config = data.get("storage", {})
         security_config = data.get("security", {})
         logging_config = data.get("logging", {})
+        event_config = data.get("eventBus", {})
 
         return cls(
             socket_path=daemon_config.get("socket_path", cls.socket_path),
@@ -56,6 +63,14 @@ class DaemonConfig:
             allowed_sources=security_config.get("allowed_sources", cls.allowed_sources),
             log_level=logging_config.get("level", cls.log_level),
             structured_logging=logging_config.get("structured", cls.structured_logging),
+            event_bus_enabled=event_config.get("enabled", cls.event_bus_enabled),
+            events_dir=event_config.get("eventsDir", cls.events_dir),
+            event_rate_limit=event_config.get("rateLimit", {}).get(
+                "maxEventsPerSecond", cls.event_rate_limit
+            ),
+            event_burst_size=event_config.get("rateLimit", {}).get(
+                "burstSize", cls.event_burst_size
+            ),
         )
 
     @classmethod

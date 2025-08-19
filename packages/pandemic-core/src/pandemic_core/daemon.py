@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from .config import DaemonConfig
+from .events import EventBusManager
 from .handlers import MessageHandler
 from .state import StateManager
 
@@ -21,13 +22,18 @@ class PandemicDaemon:
         self.config = config
         self.logger = logging.getLogger(__name__)
         self.state_manager = StateManager(config)
-        self.message_handler = MessageHandler(config, self.state_manager)
+        self.event_bus = EventBusManager(config.events_dir) if config.event_bus_enabled else None
+        self.message_handler = MessageHandler(config, self.state_manager, self.event_bus)
         self.server = None
         self.running = False
 
     async def start(self):
         """Start the daemon server."""
         self.logger.info("Starting pandemic daemon")
+
+        # Start event bus if enabled
+        if self.event_bus:
+            await self.event_bus.start()
 
         # Ensure socket directory exists
         socket_path = Path(self.config.socket_path)
@@ -58,6 +64,10 @@ class PandemicDaemon:
         if self.server:
             self.server.close()
             await self.server.wait_closed()
+
+        # Stop event bus
+        if self.event_bus:
+            await self.event_bus.stop()
 
         # Clean up socket
         socket_path = Path(self.config.socket_path)
