@@ -10,8 +10,7 @@ import boto3
 import requests
 from botocore.exceptions import BotoCoreError, ClientError
 from cryptography import x509
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import ec, rsa
+from cryptography.hazmat.primitives import serialization
 
 from .aws_signer import IAMRolesAnywhereSigner
 from .base import CloudProvider, Credentials
@@ -145,7 +144,7 @@ class AWSProvider(CloudProvider):
             signed_headers = signer.sign_request("POST", url, headers, payload, self.region)
 
             # Make the signed request
-            response = requests.post(url, headers=signed_headers, data=payload)
+            response = requests.post(url, headers=signed_headers, data=payload, timeout=30)
 
             if response.status_code == 200:
                 return response.json()

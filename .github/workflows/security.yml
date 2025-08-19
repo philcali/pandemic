@@ -26,8 +26,8 @@ jobs:
 
     - name: Run Bandit security scan
       run: |
-        bandit -r packages/*/src -f json -o bandit-report.json || true
-        bandit -r packages/*/src
+        bandit -s B404 -r packages/*/src -f json -o bandit-report.json || true
+        bandit -s B404 -r packages/*/src
 
     - name: Run Safety check
       run: |

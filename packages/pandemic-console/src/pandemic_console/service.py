@@ -28,7 +28,7 @@ class ConsoleService:
         if not config_file.exists():
             # Return default configuration
             return {
-                "server": {"host": "0.0.0.0", "port": 3000},
+                "server": {"host": "localhost", "port": 3000},
                 "api": {"base_url": "https://localhost:8443/api/v1"},
                 "logging": {"level": "INFO"},
             }
@@ -70,7 +70,7 @@ class ConsoleService:
 
             # Get server configuration
             server_config = config.get("server", {})
-            host = server_config.get("host", "0.0.0.0")
+            host = server_config.get("host", "localhost")
             port = server_config.get("port", 3000)
 
             self.logger.info(f"Starting console server on {host}:{port}")

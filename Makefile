@@ -98,9 +98,10 @@ clean:
 build:
 	cd packages/pandemic-common && python3 -m build
 	cd packages/pandemic-core && python3 -m build
-	cd packages/pandemic-client && python3 -m build
+	cd packages/pandemic-cli && python3 -m build
 	cd packages/pandemic-iam && python3 -m build
 	cd packages/pandemic-rest && python3 -m build
+	cd packages/pandemic-console && python3 -m build
 
 # Development workflow
 dev-setup: install-dev
