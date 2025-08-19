@@ -12,6 +12,12 @@ install:
 
 # Install with development dependencies
 install-dev: install
+	pip3 install -e "packages/pandemic-common[dev,test]"
+	pip3 install -e "packages/pandemic-core[dev,test]"
+	pip3 install -e "packages/pandemic-cli[dev,test]"
+	pip3 install -e "packages/pandemic-iam[dev,test]"
+	pip3 install -e "packages/pandemic-rest[dev,test]"
+	pip3 install -e "packages/pandemic-console[dev,test]"
 	pip3 install -e ".[dev,test]"
 
 # Run tests for all packages
