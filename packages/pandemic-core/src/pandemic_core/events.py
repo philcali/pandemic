@@ -70,7 +70,7 @@ class EventSocket:
         )
 
         # Set socket permissions
-        os.chmod(socket_path, 0o660)
+        os.chmod(socket_path, 0o600)
 
         self.logger.debug(f"Event socket started: {socket_path}")
 
