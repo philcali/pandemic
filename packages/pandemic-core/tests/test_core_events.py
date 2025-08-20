@@ -211,7 +211,7 @@ class TestEventBusManager:
 class TestEventBusIntegration:
     """Integration tests for event bus system."""
 
-    @pytest.fixture
+    @pytest.fixture(scope="session")
     def temp_events_dir(self):
         """Create temporary events directory."""
         with tempfile.TemporaryDirectory() as temp_dir:
