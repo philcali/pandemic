@@ -3,9 +3,9 @@
 import asyncio
 import json
 import os
+import sys
 import tempfile
 import time
-import sys
 from pathlib import Path
 
 import pytest
