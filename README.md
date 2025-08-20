@@ -28,7 +28,7 @@ Shared utilities, types, and protocol definitions used across all packages.
 Core daemon that manages infection lifecycle through Unix domain sockets and systemd integration.
 
 ### pandemic-cli
-Command-line interface for interacting with the pandemic daemon.
+Command-line interface for interacting with the pandemic daemon. Includes bootstrap functionality for automated daemon setup.
 
 ### pandemic-iam
 IMDSv2-style cloud metadata service that provides transparent host-wide access to cloud credentials via certificate-based authentication.
@@ -48,8 +48,8 @@ make install-dev
 # Run all tests
 make test
 
-# Start daemon
-pandemic
+# Bootstrap daemon (requires sudo)
+sudo pandemic-cli bootstrap
 
 # Use CLI
 pandemic-cli status
@@ -62,6 +62,30 @@ pandemic-cli start console
 
 # Access web dashboard at http://localhost:3000
 ```
+
+## Bootstrap Command
+
+The `bootstrap` command simplifies pandemic-core daemon installation by automating systemd service creation and system setup:
+
+```bash
+# Basic bootstrap (creates user, directories, systemd service)
+sudo pandemic-cli bootstrap
+
+# Preview actions without executing
+sudo pandemic-cli bootstrap --dry-run
+
+# Custom user and socket path
+sudo pandemic-cli bootstrap --user myuser --socket-path /tmp/pandemic.sock
+
+# Force reinstall existing service
+sudo pandemic-cli bootstrap --force
+```
+
+The bootstrap process:
+- Creates system user and required directories
+- Generates systemd service file
+- Enables and starts the pandemic-core service
+- Validates successful daemon startup
 
 ## Development
 
