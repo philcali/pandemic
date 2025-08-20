@@ -8,6 +8,7 @@ from rich.console import Console
 from rich.table import Table
 from rich.text import Text
 
+from .bootstrap import BootstrapManager
 from .client import PandemicClient
 
 console = Console()
@@ -280,3 +281,30 @@ def logs(ctx, infection_id, lines):
             await client.disconnect()
 
     asyncio.run(_logs())
+
+
+@cli.command()
+@click.option("--user", default="pandemic", help="System user for daemon")
+@click.option("--socket-path", default="/var/run/pandemic/daemon.sock", help="Unix socket path")
+@click.option("--dry-run", is_flag=True, help="Preview actions without executing")
+@click.option("--force", is_flag=True, help="Force reinstall existing service")
+def bootstrap(user, socket_path, dry_run, force):
+    """Bootstrap pandemic-core daemon setup."""
+    try:
+        manager = BootstrapManager(user, socket_path)
+
+        console.print("Bootstrapping pandemic-core daemon...", style="blue")
+        actions = manager.bootstrap(dry_run, force)
+
+        for action in actions:
+            console.print(action, style="green")
+
+        if dry_run:
+            console.print("\nDry run completed - no changes made", style="yellow")
+        else:
+            console.print("\nBootstrap completed successfully!", style="green bold")
+            console.print(f"Daemon is running at {socket_path}", style="blue")
+
+    except Exception as e:
+        console.print(f"❌ Bootstrap failed: {e}", style="red")
+        raise click.ClickException(str(e))
