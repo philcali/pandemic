@@ -124,7 +124,7 @@ class TestEventBusPerformance:
                 subscribers.append((reader, writer))
 
             try:
-                await asyncio.sleep(1.0)
+                await asyncio.sleep(2.0)
                 # Publish events and measure time
                 num_events = 50
                 start_time = time.time()
@@ -135,9 +135,11 @@ class TestEventBusPerformance:
                 # Verify all subscribers receive all events
                 for sub_id, (reader, writer) in enumerate(subscribers):
                     for event_id in range(num_events):
-                        length_data = await reader.readexactly(4)
+                        length_data = await asyncio.wait_for(reader.readexactly(4), timeout=1.0)
                         event_length = int.from_bytes(length_data, "big")
-                        event_data = await reader.readexactly(event_length)
+                        event_data = await asyncio.wait_for(
+                            reader.readexactly(event_length), timeout=1.0
+                        )
 
                 end_time = time.time()
                 duration = end_time - start_time
