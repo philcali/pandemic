@@ -28,7 +28,6 @@ def test_config(temp_dir):
         config_dir=str(temp_dir / "config"),
         log_level="DEBUG",
         validate_signatures=False,
-        # TODO: Thsi is temperary until Phase 4 is implemented in the event bus spec
         event_bus_enabled=False,
     )
 

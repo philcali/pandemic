@@ -1,7 +1,7 @@
 """Pandemic daemon client for UDS communication."""
 
 import asyncio
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from pandemic_common.protocol import UDSProtocol
 
@@ -102,3 +102,24 @@ class PandemicClient:
         if infection_id:
             payload["infectionId"] = infection_id
         return await self.send_command("metrics", payload)
+
+    async def get_config(self, infection_id: Optional[str] = None) -> Dict[str, Any]:
+        """Get daemon or infection configuration."""
+        payload = {}
+        if infection_id:
+            payload["infectionId"] = infection_id
+        return await self.send_command("getConfig", payload)
+
+    async def subscribe_events(
+        self, infection_id: str, subscriptions: List[Dict[str, str]]
+    ) -> Dict[str, Any]:
+        """Subscribe to events for an infection."""
+        payload = {"infectionId": infection_id, "subscriptions": subscriptions}
+        return await self.send_command("subscribeEvents", payload)
+
+    async def unsubscribe_events(
+        self, infection_id: str, subscriptions: List[Dict[str, str]]
+    ) -> Dict[str, Any]:
+        """Unsubscribe from events for an infection."""
+        payload = {"infectionId": infection_id, "subscriptions": subscriptions}
+        return await self.send_command("unsubscribeEvents", payload)

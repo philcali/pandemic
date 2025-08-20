@@ -165,6 +165,7 @@ class EventSocket:
             return
 
         if not self.subscribers:
+            self.logger.debug(f"No subscribers for {self.source_id}, dropping event {event.type}")
             return
 
         try:
@@ -195,11 +196,10 @@ class EventSocket:
         self.logger.debug(f"New subscriber connected to {self.source_id}")
 
         try:
-            # Keep connection alive until client disconnects
-            while True:
-                data = await reader.read(1024)
-                if not data:
-                    break
+            # Monitor connection without reading data
+            # Subscribers only receive events, they don't send data
+            while not writer.is_closing():
+                await asyncio.sleep(0.1)
         except Exception as e:
             self.logger.debug(f"Subscriber error: {e}")
         finally:
@@ -208,7 +208,7 @@ class EventSocket:
                 writer.close()
                 await writer.wait_closed()
             except Exception as e:
-                self.logger.warning(f"Error closing subscriber connection: {e}")
+                self.logger.warning(f"Failed to close subscriber connection: {e}")
             self.logger.debug(f"Subscriber disconnected from {self.source_id}")
 
 
@@ -222,12 +222,14 @@ class EventBusManager:
         burst_size: int = 200,
         socket_mode: int = 0o660,
         socket_group: str = "pandemic",
+        event_mode: int = 0o770,
     ):
         self.events_dir = events_dir
         self.rate_limit = rate_limit
         self.burst_size = burst_size
         self.socket_mode = socket_mode
         self.socket_group = socket_group
+        self.event_mode = event_mode
         self.sockets: Dict[str, EventSocket] = {}
         self.logger = logging.getLogger(__name__)
 
@@ -241,7 +243,7 @@ class EventBusManager:
             events_path.mkdir(parents=True, exist_ok=True)
 
             # Set directory permissions
-            os.chmod(self.events_dir, 0o700)
+            os.chmod(self.events_dir, self.event_mode)
 
             # Set directory group ownership
             try:
