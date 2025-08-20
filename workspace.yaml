@@ -19,6 +19,21 @@ packages:
     description: "CLI package for system administration"
     dependencies: ["pandemic-common"]
 
+  - name: "pandemic-iam"
+    path: "packages/pandemic-iam" 
+    description: "IMDSv2-style cloud metadata service"
+    dependencies: ["pandemic-core"]
+
+  - name: "pandemic-rest"
+    path: "packages/pandemic-rest" 
+    description: "REST API service exposed against the core daemon"
+    dependencies: ["pandemic-core"]
+
+  - name: "pandemic-console"
+    path: "packages/pandemic-console" 
+    description: "Web based interface for the core daemon"
+    dependencies: ["pandemic-rest"]
+
 tools:
   python: ">=3.10"
   pytest: ">=7.0"

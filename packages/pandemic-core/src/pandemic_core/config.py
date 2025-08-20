@@ -42,14 +42,20 @@ class DaemonConfig:
         if not config_file.exists():
             return cls()
 
-        with open(config_file) as f:
-            data = yaml.safe_load(f) or {}
+        try:
+            with open(config_file) as f:
+                data = yaml.safe_load(f) or {}
+        except Exception as e:
+            raise ValueError(f"Failed to load config file {config_path}: {e}")
 
         daemon_config = data.get("daemon", {})
         storage_config = data.get("storage", {})
         security_config = data.get("security", {})
         logging_config = data.get("logging", {})
         event_config = data.get("eventBus", {})
+
+        # Parse rate limit configuration
+        rate_limit_config = event_config.get("rateLimit", {})
 
         return cls(
             socket_path=daemon_config.get("socket_path", cls.socket_path),
@@ -65,12 +71,8 @@ class DaemonConfig:
             structured_logging=logging_config.get("structured", cls.structured_logging),
             event_bus_enabled=event_config.get("enabled", cls.event_bus_enabled),
             events_dir=event_config.get("eventsDir", cls.events_dir),
-            event_rate_limit=event_config.get("rateLimit", {}).get(
-                "maxEventsPerSecond", cls.event_rate_limit
-            ),
-            event_burst_size=event_config.get("rateLimit", {}).get(
-                "burstSize", cls.event_burst_size
-            ),
+            event_rate_limit=rate_limit_config.get("maxEventsPerSecond", cls.event_rate_limit),
+            event_burst_size=rate_limit_config.get("burstSize", cls.event_burst_size),
         )
 
     @classmethod
@@ -85,4 +87,76 @@ class DaemonConfig:
             config_dir=os.getenv("PANDEMIC_CONFIG_DIR", cls.config_dir),
             state_dir=os.getenv("PANDEMIC_STATE_DIR", cls.state_dir),
             log_level=os.getenv("PANDEMIC_LOG_LEVEL", cls.log_level),
+            event_bus_enabled=os.getenv("PANDEMIC_EVENT_BUS_ENABLED", "true").lower() == "true",
+            events_dir=os.getenv("PANDEMIC_EVENTS_DIR", cls.events_dir),
+            event_rate_limit=int(os.getenv("PANDEMIC_EVENT_RATE_LIMIT", str(cls.event_rate_limit))),
+            event_burst_size=int(os.getenv("PANDEMIC_EVENT_BURST_SIZE", str(cls.event_burst_size))),
         )
+
+    def validate(self) -> List[str]:
+        """Validate configuration and return list of errors."""
+        errors = []
+
+        # Validate paths
+        for path_name, path_value in [
+            ("socket_path", self.socket_path),
+            ("pid_file", self.pid_file),
+            ("infections_dir", self.infections_dir),
+            ("config_dir", self.config_dir),
+            ("state_dir", self.state_dir),
+            ("events_dir", self.events_dir),
+        ]:
+            if not path_value:
+                errors.append(f"{path_name} cannot be empty")
+            elif not os.path.isabs(path_value):
+                errors.append(f"{path_name} must be an absolute path: {path_value}")
+
+        # Validate socket mode
+        if not (0o000 <= self.socket_mode <= 0o777):
+            errors.append(f"Invalid socket_mode: {oct(self.socket_mode)}")
+
+        # Validate rate limiting
+        if self.event_rate_limit <= 0:
+            errors.append(f"event_rate_limit must be positive: {self.event_rate_limit}")
+
+        if self.event_burst_size <= 0:
+            errors.append(f"event_burst_size must be positive: {self.event_burst_size}")
+
+        # Validate log level
+        valid_log_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+        if self.log_level.upper() not in valid_log_levels:
+            errors.append(f"Invalid log_level: {self.log_level}")
+
+        return errors
+
+    def to_dict(self) -> dict:
+        """Convert configuration to dictionary."""
+        return {
+            "daemon": {
+                "socket_path": self.socket_path,
+                "socket_mode": oct(self.socket_mode),
+                "socket_group": self.socket_group,
+                "pid_file": self.pid_file,
+            },
+            "storage": {
+                "infections_dir": self.infections_dir,
+                "config_dir": self.config_dir,
+                "state_dir": self.state_dir,
+            },
+            "security": {
+                "validate_signatures": self.validate_signatures,
+                "allowed_sources": self.allowed_sources,
+            },
+            "logging": {
+                "level": self.log_level,
+                "structured": self.structured_logging,
+            },
+            "eventBus": {
+                "enabled": self.event_bus_enabled,
+                "eventsDir": self.events_dir,
+                "rateLimit": {
+                    "maxEventsPerSecond": self.event_rate_limit,
+                    "burstSize": self.event_burst_size,
+                },
+            },
+        }

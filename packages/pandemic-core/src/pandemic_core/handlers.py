@@ -106,6 +106,16 @@ class MessageHandler:
             if source and pattern:
                 self.subscriptions[infection_id][source] = pattern
 
+        # Publish subscription event
+        await self._publish_event(
+            "system.subscription",
+            {
+                "infectionId": infection_id,
+                "action": "subscribe",
+                "subscriptionCount": len(subscriptions),
+            },
+        )
+
         self.logger.debug(
             f"Updated subscriptions for {infection_id}: {len(subscriptions)} subscriptions"
         )
@@ -135,6 +145,11 @@ class MessageHandler:
             if not self.subscriptions[infection_id]:
                 del self.subscriptions[infection_id]
 
+        # Publish unsubscription event
+        await self._publish_event(
+            "system.subscription", {"infectionId": infection_id, "action": "unsubscribe"}
+        )
+
         self.logger.debug(f"Removed subscriptions for {infection_id}")
 
         return {"status": "unsubscribed", "infectionId": infection_id}
@@ -151,7 +166,13 @@ class MessageHandler:
             return {"status": "healthy", "infectionId": infection_id}
         else:
             # Daemon health check
-            return {"status": "healthy", "daemon": True}
+            health_data = {"status": "healthy", "daemon": True}
+
+            # Add event bus health if enabled
+            if self.event_bus:
+                health_data["eventBus"] = self.event_bus.get_stats()
+
+            return health_data
 
     async def _handle_status(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Handle status request."""
@@ -169,13 +190,27 @@ class MessageHandler:
                 infection["systemdStatus"] = systemd_status
                 infection["state"] = self._map_systemd_state(systemd_status["activeState"])
 
+            # Add event subscription info
+            if infection_id in self.subscriptions:
+                infection["eventSubscriptions"] = self.subscriptions[infection_id]
+
             return infection
         else:
-            return {
+            status_data = {
                 "daemon": "running",
                 "infections": len(self.state_manager.list_infections()),
                 "uptime": "0h 0m",  # TODO: Calculate actual uptime
             }
+
+            # Add event bus status
+            if self.event_bus:
+                status_data["eventBus"] = {
+                    "enabled": True,
+                    "sources": len(self.event_bus.list_sources()),
+                    "subscriptions": len(self.subscriptions),
+                }
+
+            return status_data
 
     async def _handle_list(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Handle list infections request."""
@@ -381,15 +416,13 @@ class MessageHandler:
             return {"config": {}}
         else:
             # Return daemon config
-            return {
-                "config": {
-                    "socketPath": self.config.socket_path,
-                    "infectionsDir": self.config.infections_dir,
-                    "logLevel": self.config.log_level,
-                    "eventBusEnabled": self.config.event_bus_enabled,
-                    "eventsDir": self.config.events_dir,
-                }
-            }
+            config_dict = self.config.to_dict()
+
+            # Add event bus stats if available
+            if self.event_bus:
+                config_dict["eventBus"]["stats"] = self.event_bus.get_stats()
+
+            return {"config": config_dict}
 
     async def _handle_set_config(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """Handle set configuration."""
