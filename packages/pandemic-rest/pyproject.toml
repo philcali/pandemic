@@ -17,7 +17,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = ["pytest>=7.0", "pytest-asyncio>=0.21", "pytest-cov>=4.0", "httpx>=0.25.0"]
+test = ["pytest>=7.0", "pytest-asyncio>=0.26", "pytest-cov>=4.0", "httpx>=0.25.0"]
 dev = ["black>=23.0", "isort>=5.0", "mypy>=1.0", "flake8>=6.0"]
 ldap = ["python-ldap>=3.4.0"]
 oidc = ["authlib>=1.2.0"]
