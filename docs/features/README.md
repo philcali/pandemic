@@ -43,3 +43,4 @@ Any breaking changes or migration steps.
 - [Pandemic IAM](pandemic-iam.md) - IMDSv2-style cloud metadata service
 - [Pandemic REST](pandemic-rest.md) - HTTP API plugin for web/remote access
 - [Pandemic Console](pandemic-console.md) - Web-based dashboard interface
+- [Pandemic Event Bus](event-bus.md) - Event bus in pandemic-core and integrations
