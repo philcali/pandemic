@@ -99,6 +99,7 @@ uninstall: clean
 	pip3 uninstall -y pandemic-console
 	pip3 uninstall -y pandemic-rest
 	pip3 uninstall -y pandemic-iam
+	pip3 uninstall -y pandemic-cli
 	pip3 uninstall -y pandemic-core
 	pip3 uninstall -y pandemic-common
 	pip3 uninstall -y pandemic
