@@ -17,7 +17,7 @@ console = Console()
 @click.group()
 @click.option(
     "--socket",
-    default="/var/run/pandemic.sock",
+    default="/var/run/pandemic/daemon.sock",
     help="Path to pandemic daemon socket",
     show_default=True,
 )

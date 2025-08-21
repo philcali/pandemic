@@ -24,7 +24,7 @@ def load_config(config_path: str) -> dict:
         # Return default configuration
         return {
             "server": {"host": "0.0.0.0", "port": 8443},
-            "daemon": {"socket_path": "/var/run/pandemic.sock"},
+            "daemon": {"socket_path": "/var/run/pandemic/daemon.sock"},
             "auth": {"jwt_secret": "dev-secret", "jwt_expiry": 3600},
             "user_management": {"provider": "local"},
             "cors": {"enabled": True},
