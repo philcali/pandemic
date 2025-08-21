@@ -9,7 +9,7 @@ from pandemic_common.protocol import UDSProtocol
 class PandemicClient:
     """Client for communicating with pandemic daemon."""
 
-    def __init__(self, socket_path: str = "/var/run/pandemic.sock"):
+    def __init__(self, socket_path: str = "/var/run/pandemic/daemon.sock"):
         self.socket_path = socket_path
         self.reader: Optional[asyncio.StreamReader] = None
         self.writer: Optional[asyncio.StreamWriter] = None

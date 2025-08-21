@@ -12,10 +12,10 @@ import yaml
 class DaemonConfig:
     """Daemon configuration."""
 
-    socket_path: str = "/var/run/pandemic.sock"
+    socket_path: str = "/var/run/pandemic/daemon.sock"
     socket_mode: int = 0o660
     socket_group: str = "pandemic"
-    pid_file: str = "/var/run/pandemic.pid"
+    pid_file: str = "/var/run/pandemic/daemon.pid"
     infections_dir: str = "/opt/pandemic/infections"
     config_dir: str = "/etc/pandemic"
     state_dir: str = "/var/lib/pandemic"

@@ -16,7 +16,7 @@ class TestDaemonConfig:
         """Test default configuration values."""
         config = DaemonConfig()
 
-        assert config.socket_path == "/var/run/pandemic.sock"
+        assert config.socket_path == "/var/run/pandemic/daemon.sock"
         assert config.socket_mode == 0o660
         assert config.log_level == "INFO"
         assert config.allowed_sources == []
@@ -44,7 +44,7 @@ class TestDaemonConfig:
         """Test loading from non-existent file returns defaults."""
         config = DaemonConfig.from_file("/nonexistent/file.yaml")
 
-        assert config.socket_path == "/var/run/pandemic.sock"
+        assert config.socket_path == "/var/run/pandemic/daemon.sock"
         assert config.log_level == "INFO"
 
     def test_from_env(self):

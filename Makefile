@@ -90,9 +90,19 @@ fix: format
 clean:
 	rm -rf build/ dist/ *.egg-info/
 	rm -rf packages/*/build/ packages/*/dist/ packages/*/*.egg-info/
+	rm -rf packages/*/src/*.egg-info/
 	rm -rf .pytest_cache/ htmlcov/ .coverage
 	find . -type d -name __pycache__ -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
+
+uninstall: clean
+	pip3 uninstall -y pandemic-console
+	pip3 uninstall -y pandemic-rest
+	pip3 uninstall -y pandemic-iam
+	pip3 uninstall -y pandemic-cli
+	pip3 uninstall -y pandemic-core
+	pip3 uninstall -y pandemic-common
+	pip3 uninstall -y pandemic
 
 # Build all packages
 build:
