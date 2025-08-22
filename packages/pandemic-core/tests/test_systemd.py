@@ -1,6 +1,5 @@
 """Tests for systemd integration."""
 
-import subprocess
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -25,16 +24,14 @@ class TestSystemdManager:
         }
 
         with (
-            patch.object(systemd_manager, "_ensure_service_template", new_callable=AsyncMock),
-            patch.object(systemd_manager, "_run_systemctl", new_callable=AsyncMock),
-            patch("pathlib.Path.mkdir"),
-            patch("pathlib.Path.write_text"),
+            patch.object(systemd_manager.helper_client, "connect", new_callable=AsyncMock),
+            patch.object(systemd_manager.helper_client, "disconnect", new_callable=AsyncMock),
+            patch.object(systemd_manager.helper_client, "create_service", new_callable=AsyncMock),
         ):
-
             service_name = await systemd_manager.create_service("test-123", infection_data)
 
             assert service_name == "pandemic-infection@test-infection.service"
-            systemd_manager._run_systemctl.assert_called_with("daemon-reload")
+            systemd_manager.helper_client.create_service.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_remove_service(self, systemd_manager):
@@ -42,36 +39,44 @@ class TestSystemdManager:
         service_name = "pandemic-infection@test.service"
 
         with (
-            patch.object(systemd_manager, "stop_service", new_callable=AsyncMock),
-            patch.object(systemd_manager, "_run_systemctl", new_callable=AsyncMock),
-            patch("shutil.rmtree"),
-            patch("pathlib.Path.exists", return_value=True),
+            patch.object(systemd_manager.helper_client, "connect", new_callable=AsyncMock),
+            patch.object(systemd_manager.helper_client, "disconnect", new_callable=AsyncMock),
+            patch.object(systemd_manager.helper_client, "remove_service", new_callable=AsyncMock),
         ):
-
             await systemd_manager.remove_service(service_name)
 
-            systemd_manager.stop_service.assert_called_once_with(service_name)
-            systemd_manager._run_systemctl.assert_called_with("daemon-reload")
+            systemd_manager.helper_client.remove_service.assert_called_once_with(service_name)
 
     @pytest.mark.asyncio
     async def test_start_service(self, systemd_manager):
         """Test starting systemd service."""
-        with patch.object(
-            systemd_manager, "_run_systemctl", new_callable=AsyncMock
-        ) as mock_systemctl:
+        with (
+            patch.object(systemd_manager.helper_client, "connect", new_callable=AsyncMock),
+            patch.object(systemd_manager.helper_client, "disconnect", new_callable=AsyncMock),
+            patch.object(systemd_manager.helper_client, "start_service", new_callable=AsyncMock),
+        ):
             await systemd_manager.start_service("test.service")
-            mock_systemctl.assert_called_once_with("start", "test.service")
+            systemd_manager.helper_client.start_service.assert_called_once_with("test.service")
 
     @pytest.mark.asyncio
     async def test_get_service_status(self, systemd_manager):
         """Test getting service status."""
-        mock_result = MagicMock()
-        mock_result.stdout = (
-            "ActiveState=active\nSubState=running\nMainPID=12345\nMemoryCurrent=67108864"
-        )
+        mock_response = {
+            "activeState": "active",
+            "subState": "running",
+            "pid": 12345,
+            "memoryUsage": "67108864",
+        }
 
-        with patch.object(
-            systemd_manager, "_run_systemctl", new_callable=AsyncMock, return_value=mock_result
+        with (
+            patch.object(systemd_manager.helper_client, "connect", new_callable=AsyncMock),
+            patch.object(systemd_manager.helper_client, "disconnect", new_callable=AsyncMock),
+            patch.object(
+                systemd_manager.helper_client,
+                "get_status",
+                new_callable=AsyncMock,
+                return_value=mock_response,
+            ),
         ):
             status = await systemd_manager.get_service_status("test.service")
 
@@ -83,18 +88,23 @@ class TestSystemdManager:
     @pytest.mark.asyncio
     async def test_get_service_logs(self, systemd_manager):
         """Test getting service logs."""
-        mock_result = MagicMock()
-        mock_result.stdout = '{"MESSAGE": "Test log", "PRIORITY": "6", "_PID": "123"}\n'
+        mock_response = {"logs": [{"message": "Test log", "level": "6", "timestamp": "123456"}]}
 
-        with patch.object(
-            systemd_manager, "_run_command", new_callable=AsyncMock, return_value=mock_result
+        with (
+            patch.object(systemd_manager.helper_client, "connect", new_callable=AsyncMock),
+            patch.object(systemd_manager.helper_client, "disconnect", new_callable=AsyncMock),
+            patch.object(
+                systemd_manager.helper_client,
+                "get_logs",
+                new_callable=AsyncMock,
+                return_value=mock_response,
+            ),
         ):
             logs = await systemd_manager.get_service_logs("test.service", 10)
 
             assert len(logs) == 1
             assert logs[0]["message"] == "Test log"
             assert logs[0]["level"] == "INFO"
-            assert logs[0]["pid"] == "123"
 
     def test_format_memory(self, systemd_manager):
         """Test memory formatting."""
@@ -126,29 +136,3 @@ class TestSystemdManager:
         assert f'Environment="PANDEMIC_SOCKET={systemd_manager.config.socket_path}"' in config
         assert "MemoryLimit=128M" in config
         assert "CPUQuota=50%" in config
-
-    @pytest.mark.asyncio
-    async def test_run_command_success(self, systemd_manager):
-        """Test successful command execution."""
-        with patch("asyncio.create_subprocess_exec") as mock_subprocess:
-            mock_process = AsyncMock()
-            mock_process.communicate.return_value = (b"output", b"")
-            mock_process.returncode = 0
-            mock_subprocess.return_value = mock_process
-
-            result = await systemd_manager._run_command("echo", "test")
-
-            assert result.returncode == 0
-            assert result.stdout == "output"
-
-    @pytest.mark.asyncio
-    async def test_run_command_failure(self, systemd_manager):
-        """Test failed command execution."""
-        with patch("asyncio.create_subprocess_exec") as mock_subprocess:
-            mock_process = AsyncMock()
-            mock_process.communicate.return_value = (b"", b"error")
-            mock_process.returncode = 1
-            mock_subprocess.return_value = mock_process
-
-            with pytest.raises(subprocess.CalledProcessError):
-                await systemd_manager._run_command("false")

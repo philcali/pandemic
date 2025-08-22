@@ -13,7 +13,8 @@ class DaemonConfig:
     """Daemon configuration."""
 
     socket_path: str = "/var/run/pandemic/daemon.sock"
-    socket_mode: int = 0o660
+    # Int conversation does a base 10 on a base 8 and back to base 8
+    socket_mode: int = 432
     socket_group: str = "pandemic"
     pid_file: str = "/var/run/pandemic/daemon.pid"
     infections_dir: str = "/opt/pandemic/infections"
