@@ -38,7 +38,9 @@ def create_app(config: Dict[str, Any]) -> FastAPI:
 
     # Create dependencies
     daemon_config = config.get("daemon", {})
-    client = PandemicClient(socket_path=daemon_config.get("socket_path", "/var/run/pandemic.sock"))
+    client = PandemicClient(
+        socket_path=daemon_config.get("socket_path", "/var/run/pandemic/daemon.sock")
+    )
 
     # Create user provider and auth manager
     user_management_config = config.get("user_management", {"provider": "local"})

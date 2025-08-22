@@ -8,6 +8,7 @@ install:
 	pip3 install -e packages/pandemic-iam
 	pip3 install -e packages/pandemic-rest
 	pip3 install -e packages/pandemic-console
+	pip3 install -e packages/pandemic-systemd-helper
 	pip3 install -e .
 
 # Install with development dependencies
@@ -18,6 +19,7 @@ install-dev: install
 	pip3 install -e "packages/pandemic-iam[dev,test]"
 	pip3 install -e "packages/pandemic-rest[dev,test]"
 	pip3 install -e "packages/pandemic-console[dev,test]"
+	pip3 install -e "packages/pandemic-systemd-helper[dev,test]"
 	pip3 install -e ".[dev,test]"
 
 # Run tests for all packages
@@ -32,11 +34,15 @@ test-cov:
 	       --cov=packages/pandemic-iam/src/pandemic_iam \
 	       --cov=packages/pandemic-rest/src/pandemic_rest \
 	       --cov=packages/pandemic-console/src/pandemic_console \
+	       --cov=packages/pandemic-console/src/pandemic_systemd_helper \
 	       --cov-report=term-missing --cov-report=html
 
 # Test specific package
 test-core:
 	cd packages/pandemic-core && pytest
+
+test-systemd:
+	cd packages/pandemic-systemd-helper && pytest
 
 test-cli:
 	cd packages/pandemic-cli && pytest
@@ -101,6 +107,7 @@ uninstall: clean
 	pip3 uninstall -y pandemic-iam
 	pip3 uninstall -y pandemic-cli
 	pip3 uninstall -y pandemic-core
+	pip3 uninstall -y pandemic-systemd-helper
 	pip3 uninstall -y pandemic-common
 	pip3 uninstall -y pandemic
 
@@ -112,6 +119,7 @@ build:
 	cd packages/pandemic-iam && python3 -m build
 	cd packages/pandemic-rest && python3 -m build
 	cd packages/pandemic-console && python3 -m build
+	cd packages/pandemic-systemd-helper && python3 -m build
 
 # Development workflow
 dev-setup: install-dev

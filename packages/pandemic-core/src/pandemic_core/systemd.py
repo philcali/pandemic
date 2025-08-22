@@ -2,11 +2,11 @@
 
 import asyncio
 import logging
-import subprocess
 from pathlib import Path
 from typing import Any, Dict
 
 from .config import DaemonConfig
+from .systemd_client import SystemdHelperClient
 
 
 class SystemdManager:
@@ -15,94 +15,76 @@ class SystemdManager:
     def __init__(self, config: DaemonConfig):
         self.config = config
         self.logger = logging.getLogger(__name__)
-        self.service_template_path = Path("/etc/systemd/system/pandemic-infection@.service")
+        self.helper_client = SystemdHelperClient()
 
     async def create_service(self, infection_id: str, infection_data: Dict[str, Any]) -> str:
         """Create systemd service for infection."""
         service_name = f"pandemic-infection@{infection_data['name']}.service"
 
-        # Ensure service template exists
-        await self._ensure_service_template()
+        try:
+            await self.helper_client.connect()
 
-        # Create systemd drop-in directory for infection-specific config
-        drop_in_dir = Path(f"/etc/systemd/system/{service_name}.d")
-        drop_in_dir.mkdir(parents=True, exist_ok=True)
+            # Generate template and override config
+            template_content = self._generate_service_template()
+            override_config = self._generate_override_config(infection_data)
 
-        # Create override config
-        override_config = self._generate_override_config(infection_data)
-        override_file = drop_in_dir / "pandemic.conf"
-        override_file.write_text(override_config)
+            # Create service via helper
+            await self.helper_client.create_service(
+                service_name, template_content, override_config, infection_id
+            )
 
-        # Reload systemd
-        await self._run_systemctl("daemon-reload")
+            self.logger.info(f"Created systemd service: {service_name}")
+            return service_name
 
-        self.logger.info(f"Created systemd service: {service_name}")
-        return service_name
+        finally:
+            await self.helper_client.disconnect()
 
     async def remove_service(self, service_name: str):
         """Remove systemd service."""
-        # Stop and disable service
-        await self.stop_service(service_name)
-        await self._run_systemctl("disable", service_name)
-
-        # Remove drop-in directory
-        drop_in_dir = Path(f"/etc/systemd/system/{service_name}.d")
-        if drop_in_dir.exists():
-            import shutil
-
-            shutil.rmtree(drop_in_dir)
-
-        # Reload systemd
-        await self._run_systemctl("daemon-reload")
-
-        self.logger.info(f"Removed systemd service: {service_name}")
+        try:
+            await self.helper_client.connect()
+            await self.helper_client.remove_service(service_name)
+            self.logger.info(f"Removed systemd service: {service_name}")
+        finally:
+            await self.helper_client.disconnect()
 
     async def start_service(self, service_name: str):
         """Start systemd service."""
-        await self._run_systemctl("start", service_name)
-        self.logger.info(f"Started service: {service_name}")
+        try:
+            await self.helper_client.connect()
+            await self.helper_client.start_service(service_name)
+            self.logger.info(f"Started service: {service_name}")
+        finally:
+            await self.helper_client.disconnect()
 
     async def stop_service(self, service_name: str):
         """Stop systemd service."""
-        await self._run_systemctl("stop", service_name)
-        self.logger.info(f"Stopped service: {service_name}")
+        try:
+            await self.helper_client.connect()
+            await self.helper_client.stop_service(service_name)
+            self.logger.info(f"Stopped service: {service_name}")
+        finally:
+            await self.helper_client.disconnect()
 
     async def restart_service(self, service_name: str):
         """Restart systemd service."""
-        await self._run_systemctl("restart", service_name)
+        await self.stop_service(service_name)
+        await self.start_service(service_name)
         self.logger.info(f"Restarted service: {service_name}")
 
     async def get_service_status(self, service_name: str) -> Dict[str, Any]:
         """Get systemd service status."""
         try:
-            # Get service properties
-            result = await self._run_systemctl(
-                "show",
-                service_name,
-                "--property=ActiveState,SubState,MainPID,MemoryCurrent,CPUUsageNSec",
-            )
-
-            properties = {}
-            for line in result.stdout.strip().split("\n"):
-                if "=" in line:
-                    key, value = line.split("=", 1)
-                    properties[key] = value
-
-            # Get uptime if service is running
-            uptime = "0s"
-            if properties.get("ActiveState") == "active":
-                uptime_result = await self._run_systemctl(
-                    "show", service_name, "--property=ActiveEnterTimestamp"
-                )
-                # TODO: Calculate uptime from timestamp
+            await self.helper_client.connect()
+            response = await self.helper_client.get_status(service_name)
 
             return {
-                "activeState": properties.get("ActiveState", "unknown"),
-                "subState": properties.get("SubState", "unknown"),
-                "pid": int(properties.get("MainPID", 0)) or None,
-                "memoryUsage": self._format_memory(properties.get("MemoryCurrent", "0")),
-                "cpuUsage": self._format_cpu(properties.get("CPUUsageNSec", "0")),
-                "uptime": uptime,
+                "activeState": response.get("activeState", "unknown"),
+                "subState": response.get("subState", "unknown"),
+                "pid": response.get("pid"),
+                "memoryUsage": self._format_memory(response.get("memoryUsage", "0")),
+                "cpuUsage": "0%",  # TODO: Calculate from helper response
+                "uptime": "0s",  # TODO: Calculate uptime
             }
 
         except Exception as e:
@@ -115,43 +97,41 @@ class SystemdManager:
                 "cpuUsage": "0%",
                 "uptime": "0s",
             }
+        finally:
+            await self.helper_client.disconnect()
 
     async def get_service_logs(self, service_name: str, lines: int = 100) -> list:
         """Get service logs from journald."""
         try:
-            result = await self._run_command(
-                "journalctl", "-u", service_name, "-n", str(lines), "--output=json"
-            )
+            await self.helper_client.connect()
+            response = await self.helper_client.get_logs(service_name, lines)
 
             logs = []
-            for line in result.stdout.strip().split("\n"):
-                if line:
-                    import json
-
-                    log_entry = json.loads(line)
-                    logs.append(
-                        {
-                            "timestamp": log_entry.get("__REALTIME_TIMESTAMP", ""),
-                            "level": self._map_syslog_level(log_entry.get("PRIORITY", "6")),
-                            "message": log_entry.get("MESSAGE", ""),
-                            "pid": log_entry.get("_PID", ""),
-                        }
-                    )
+            for log_entry in response.get("logs", []):
+                logs.append(
+                    {
+                        "timestamp": log_entry.get("timestamp", ""),
+                        "level": self._map_syslog_level(log_entry.get("level", "6")),
+                        "message": log_entry.get("message", ""),
+                        "pid": "",
+                    }
+                )
 
             return logs
 
         except Exception as e:
             self.logger.error(f"Failed to get logs for {service_name}: {e}")
             return []
+        finally:
+            await self.helper_client.disconnect()
 
-    async def _ensure_service_template(self):
-        """Ensure systemd service template exists."""
-        if not self.service_template_path.exists():
-            template_content = """[Unit]
+    def _generate_service_template(self) -> str:
+        """Generate systemd service template content."""
+        return """[Unit]
 Description=Pandemic Infection: %i
-After=pandemic.service
-Requires=pandemic.service
-PartOf=pandemic.service
+After=pandemic-core.service
+Requires=pandemic-core.service
+PartOf=pandemic-core.service
 
 [Service]
 Type=simple
@@ -167,9 +147,6 @@ StandardError=journal
 [Install]
 WantedBy=pandemic.target
 """
-            self.service_template_path.parent.mkdir(parents=True, exist_ok=True)
-            self.service_template_path.write_text(template_content)
-            self.logger.info("Created systemd service template")
 
     def _generate_override_config(self, infection_data: Dict[str, Any]) -> str:
         """Generate systemd override configuration."""
@@ -190,29 +167,6 @@ WantedBy=pandemic.target
             config_lines.append(f"CPUQuota={resources['cpuQuota']}")
 
         return "\n".join(config_lines) + "\n"
-
-    async def _run_systemctl(self, *args) -> subprocess.CompletedProcess:
-        """Run systemctl command."""
-        return await self._run_command("systemctl", *args)
-
-    async def _run_command(self, *args) -> subprocess.CompletedProcess:
-        """Run command asynchronously."""
-        process = await asyncio.create_subprocess_exec(
-            *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-        )
-
-        stdout, stderr = await process.communicate()
-
-        result = subprocess.CompletedProcess(
-            args, process.returncode or 0, stdout.decode(), stderr.decode()
-        )
-
-        if result.returncode != 0:
-            raise subprocess.CalledProcessError(
-                result.returncode, args, result.stdout, result.stderr
-            )
-
-        return result
 
     def _format_memory(self, memory_bytes: str) -> str:
         """Format memory usage."""

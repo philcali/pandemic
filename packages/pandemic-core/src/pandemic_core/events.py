@@ -10,7 +10,7 @@ import time
 import uuid
 from collections import defaultdict, deque
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 from weakref import WeakSet
@@ -37,7 +37,7 @@ class Event:
             version=version,
             source=source,
             type=event_type,
-            timestamp=datetime.utcnow().isoformat() + "Z",
+            timestamp=datetime.now(timezone.utc).isoformat() + "Z",
             payload=payload,
         )
 
@@ -86,7 +86,7 @@ class EventSocket:
         socket_path: str,
         source_id: str,
         rate_limiter: Optional[RateLimiter] = None,
-        socket_mode: int = 0o660,
+        socket_mode: int = 432,
         socket_group: str = "pandemic",
     ):
         self.socket_path = socket_path
@@ -220,9 +220,9 @@ class EventBusManager:
         events_dir: str = "/var/run/pandemic/events",
         rate_limit: int = 100,
         burst_size: int = 200,
-        socket_mode: int = 0o660,
+        socket_mode: int = 432,
         socket_group: str = "pandemic",
-        event_mode: int = 0o770,
+        event_mode: int = 504,
     ):
         self.events_dir = events_dir
         self.rate_limit = rate_limit

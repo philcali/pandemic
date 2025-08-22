@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pandemic-systemd-helper"
+version = "0.0.1"
+description = "Privileged systemd helper for pandemic infections"
+authors = [{name = "Pandemic Team"}]
+requires-python = ">=3.8"
+dependencies = [
+    "pandemic-common==0.0.1"
+]
+
+[project.scripts]
+pandemic-systemd-helper = "pandemic_systemd_helper.__main__:main"
+
+[project.optional-dependencies]
+test = ["pytest>=7.0", "pytest-asyncio>=0.26", "pytest-cov>=4.0"]
+dev = ["black>=23.0", "isort>=5.0", "mypy>=1.0", "flake8>=6.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
