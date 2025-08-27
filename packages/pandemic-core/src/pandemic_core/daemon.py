@@ -6,7 +6,7 @@ import logging
 import os
 import signal
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from .config import DaemonConfig
 from .events import EventBusManager

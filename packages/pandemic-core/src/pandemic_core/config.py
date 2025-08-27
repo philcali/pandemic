@@ -14,7 +14,7 @@ class DaemonConfig:
 
     socket_path: str = "/var/run/pandemic/daemon.sock"
     # Int conversation does a base 10 on a base 8 and back to base 8
-    socket_mode: int = 432
+    socket_mode: int = 0o660
     socket_group: str = "pandemic"
     pid_file: str = "/var/run/pandemic/daemon.pid"
     infections_dir: str = "/opt/pandemic/infections"
@@ -60,7 +60,7 @@ class DaemonConfig:
 
         return cls(
             socket_path=daemon_config.get("socket_path", cls.socket_path),
-            socket_mode=daemon_config.get("socket_mode", cls.socket_mode),
+            socket_mode=int(str(daemon_config.get("socket_mode", cls.socket_mode)), 8),
             socket_group=daemon_config.get("socket_group", cls.socket_group),
             pid_file=daemon_config.get("pid_file", cls.pid_file),
             infections_dir=storage_config.get("infections_dir", cls.infections_dir),
