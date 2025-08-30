@@ -14,7 +14,7 @@ class DaemonConfig:
 
     socket_path: str = "/var/run/pandemic/daemon.sock"
     # Int conversation does a base 10 on a base 8 and back to base 8
-    socket_mode: int = 0o660
+    socket_mode: int = 660
     socket_group: str = "pandemic"
     pid_file: str = "/var/run/pandemic/daemon.pid"
     infections_dir: str = "/opt/pandemic/infections"
@@ -60,7 +60,7 @@ class DaemonConfig:
 
         return cls(
             socket_path=daemon_config.get("socket_path", cls.socket_path),
-            socket_mode=int(str(daemon_config.get("socket_mode", cls.socket_mode)), 8),
+            socket_mode=int(str(daemon_config.get("socket_mode", cls.socket_mode))),
             socket_group=daemon_config.get("socket_group", cls.socket_group),
             pid_file=daemon_config.get("pid_file", cls.pid_file),
             infections_dir=storage_config.get("infections_dir", cls.infections_dir),
@@ -81,7 +81,7 @@ class DaemonConfig:
         """Load configuration from environment variables."""
         return cls(
             socket_path=os.getenv("PANDEMIC_SOCKET_PATH", cls.socket_path),
-            socket_mode=int(os.getenv("PANDEMIC_SOCKET_MODE", str(cls.socket_mode)), 8),
+            socket_mode=int(os.getenv("PANDEMIC_SOCKET_MODE", str(cls.socket_mode))),
             socket_group=os.getenv("PANDEMIC_SOCKET_GROUP", cls.socket_group),
             pid_file=os.getenv("PANDEMIC_PID_FILE", cls.pid_file),
             infections_dir=os.getenv("PANDEMIC_INFECTIONS_DIR", cls.infections_dir),
@@ -113,7 +113,7 @@ class DaemonConfig:
                 errors.append(f"{path_name} must be an absolute path: {path_value}")
 
         # Validate socket mode
-        if not (0o000 <= self.socket_mode <= 0o777):
+        if not (0o000 <= int(str(self.socket_mode), 8) <= 0o777):
             errors.append(f"Invalid socket_mode: {oct(self.socket_mode)}")
 
         # Validate rate limiting

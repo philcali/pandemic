@@ -72,7 +72,7 @@ class PandemicDaemon:
             )
 
             # Set socket permissions
-            os.chmod(socket_path, self.config.socket_mode)
+            os.chmod(socket_path, int(str(self.config.socket_mode), 8))
 
             # Publish daemon started event
             if self.event_bus:

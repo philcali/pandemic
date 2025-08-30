@@ -14,7 +14,7 @@ class TestDaemonConfig:
         config = DaemonConfig()
 
         assert config.socket_path == "/var/run/pandemic/daemon.sock"
-        assert config.socket_mode == 0o660
+        assert config.socket_mode == 660
         assert config.log_level == "INFO"
         assert config.allowed_sources == []
 
@@ -33,7 +33,7 @@ class TestDaemonConfig:
         config = DaemonConfig.from_file(str(config_file))
 
         assert config.socket_path == "/tmp/test.sock"
-        assert config.socket_mode == 0o644
+        assert config.socket_mode == 644
         assert config.infections_dir == "/tmp/infections"
         assert config.log_level == "DEBUG"
 
