@@ -18,7 +18,7 @@ def create_parser():
     parser.add_argument(
         "--socket-mode",
         type=int,
-        default=432,
+        default=660,
         help="Permissions for the systemd helper socket",
     )
     parser.add_argument(

@@ -81,7 +81,7 @@ def list(ctx, state):
                     for infection in infections:
                         state_style = "green" if infection.get("state") == "running" else "yellow"
                         table.add_row(
-                            infection.get("infectionId", "")[:12] + "...",
+                            infection.get("infectionId", ""),
                             infection.get("name", ""),
                             Text(infection.get("state", ""), style=state_style),
                             infection.get("version", ""),

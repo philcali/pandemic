@@ -1,6 +1,6 @@
 """Tests for systemd integration."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from pandemic_core.systemd import SystemdManager

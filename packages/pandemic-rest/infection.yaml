@@ -9,7 +9,7 @@ source:
   url: github://pandemic-org/pandemic-rest@v1.0.0
 
 systemd:
-  user: pandemic-rest
+  user: pandemic
   group: pandemic
   working_directory: /opt/pandemic/infections/pandemic-rest
   environment:

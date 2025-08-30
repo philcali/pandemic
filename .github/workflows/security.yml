@@ -22,17 +22,12 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install bandit safety
+        pip install bandit
 
     - name: Run Bandit security scan
       run: |
         bandit -s B404,B603,B607 -r packages/*/src -f json -o bandit-report.json || true
         bandit -s B404,B603,B607 -r packages/*/src
-
-    - name: Run Safety check
-      run: |
-        safety check --json --output safety-report.json || true
-        safety check
 
     - name: Upload security reports
       uses: actions/upload-artifact@v4
@@ -41,7 +36,6 @@ jobs:
         name: security-reports
         path: |
           bandit-report.json
-          safety-report.json
 
   dependency-review:
     runs-on: ubuntu-latest

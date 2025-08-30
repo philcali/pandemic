@@ -20,7 +20,7 @@ class HelperDaemon:
     def __init__(
         self,
         socket_path: str = "/var/run/pandemic/systemd-helper.sock",
-        socket_mode: int = 432,
+        socket_mode: int = 660,
         socket_owner: str = "pandemic",
     ):
         self.socket_path = socket_path
@@ -67,7 +67,7 @@ class HelperDaemon:
 
             # Set socket permissions (readable/writable by pandemic group)
             user_info = pwd.getpwnam(self.socket_owner)
-            os.chmod(socket_path, self.socket_mode)
+            os.chmod(socket_path, int(str(self.socket_mode), 8))
             os.chown(socket_path, user_info.pw_uid, user_info.pw_gid)
 
             self.running = True

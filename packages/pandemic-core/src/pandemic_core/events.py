@@ -8,11 +8,10 @@ import os
 import pwd
 import time
 import uuid
-from collections import defaultdict, deque
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional
 from weakref import WeakSet
 
 
@@ -86,7 +85,7 @@ class EventSocket:
         socket_path: str,
         source_id: str,
         rate_limiter: Optional[RateLimiter] = None,
-        socket_mode: int = 432,
+        socket_mode: int = 660,
         socket_group: str = "pandemic",
     ):
         self.socket_path = socket_path
@@ -124,7 +123,7 @@ class EventSocket:
         """Set socket file permissions and group ownership."""
         try:
             # Set file mode
-            os.chmod(self.socket_path, self.socket_mode)
+            os.chmod(self.socket_path, int(str(self.socket_mode), 8))
 
             # Set group ownership if group exists
             try:
@@ -220,9 +219,9 @@ class EventBusManager:
         events_dir: str = "/var/run/pandemic/events",
         rate_limit: int = 100,
         burst_size: int = 200,
-        socket_mode: int = 432,
+        socket_mode: int = 660,
         socket_group: str = "pandemic",
-        event_mode: int = 504,
+        event_mode: int = 770,
     ):
         self.events_dir = events_dir
         self.rate_limit = rate_limit
@@ -243,7 +242,7 @@ class EventBusManager:
             events_path.mkdir(parents=True, exist_ok=True)
 
             # Set directory permissions
-            os.chmod(self.events_dir, self.event_mode)
+            os.chmod(self.events_dir, int(str(self.event_mode), 8))
 
             # Set directory group ownership
             try:

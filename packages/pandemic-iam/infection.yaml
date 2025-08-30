@@ -9,7 +9,7 @@ source:
   url: github://pandemic-org/pandemic-iam@v1.0.0
 
 systemd:
-  user: pandemic-iam
+  user: pandemic
   group: pandemic
   working_directory: /opt/pandemic/infections/pandemic-iam
   environment:

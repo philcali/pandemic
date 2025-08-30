@@ -1,10 +1,7 @@
 """Tests for configuration management."""
 
 import os
-import tempfile
-from pathlib import Path
 
-import pytest
 import yaml
 from pandemic_core.config import DaemonConfig
 
@@ -17,7 +14,7 @@ class TestDaemonConfig:
         config = DaemonConfig()
 
         assert config.socket_path == "/var/run/pandemic/daemon.sock"
-        assert config.socket_mode == 0o660
+        assert config.socket_mode == 660
         assert config.log_level == "INFO"
         assert config.allowed_sources == []
 
@@ -25,7 +22,7 @@ class TestDaemonConfig:
         """Test loading configuration from YAML file."""
         config_file = temp_dir / "daemon.yaml"
         config_data = {
-            "daemon": {"socket_path": "/tmp/test.sock", "socket_mode": 0o644},
+            "daemon": {"socket_path": "/tmp/test.sock", "socket_mode": 644},
             "storage": {"infections_dir": "/tmp/infections"},
             "logging": {"level": "DEBUG"},
         }
@@ -36,7 +33,7 @@ class TestDaemonConfig:
         config = DaemonConfig.from_file(str(config_file))
 
         assert config.socket_path == "/tmp/test.sock"
-        assert config.socket_mode == 0o644
+        assert config.socket_mode == 644
         assert config.infections_dir == "/tmp/infections"
         assert config.log_level == "DEBUG"
 

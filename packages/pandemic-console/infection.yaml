@@ -9,7 +9,7 @@ source:
   url: github://pandemic-org/pandemic-console@v1.0.0
 
 systemd:
-  user: pandemic-console
+  user: pandemic
   group: pandemic
   working_directory: /opt/pandemic/infections/pandemic-console
   environment:

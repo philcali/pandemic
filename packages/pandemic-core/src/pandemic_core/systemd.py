@@ -1,8 +1,6 @@
 """Systemd integration for pandemic infections."""
 
-import asyncio
 import logging
-from pathlib import Path
 from typing import Any, Dict
 
 from .config import DaemonConfig
@@ -25,7 +23,9 @@ class SystemdManager:
             await self.helper_client.connect()
 
             # Generate template and override config
-            template_content = self._generate_service_template()
+            template_content = self._generate_service_template(
+                config_data=infection_data.get("configInfo", {})
+            )
             override_config = self._generate_override_config(infection_data)
 
             # Create service via helper
@@ -125,9 +125,11 @@ class SystemdManager:
         finally:
             await self.helper_client.disconnect()
 
-    def _generate_service_template(self) -> str:
+    def _generate_service_template(self, config_data: Dict[str, Any]) -> str:
         """Generate systemd service template content."""
-        return """[Unit]
+        systemd = config_data.get("systemd", {})
+        execution = config_data.get("execution", {})
+        return f"""[Unit]
 Description=Pandemic Infection: %i
 After=pandemic-core.service
 Requires=pandemic-core.service
@@ -135,10 +137,10 @@ PartOf=pandemic-core.service
 
 [Service]
 Type=simple
-User=pandemic-%i
+User={systemd.get("user", "pandemic-%i")}
 Group=pandemic
 WorkingDirectory=/opt/pandemic/infections/%i
-ExecStart=/opt/pandemic/infections/%i/bin/%i
+ExecStart={execution.get("command", "/opt/pandemic/infections/%i/bin/%i")}
 Restart=always
 RestartSec=5
 StandardOutput=journal
