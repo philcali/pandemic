@@ -1,0 +1,24 @@
+metadata:
+  name: pandemic-event-bus
+  version: 0.0.1
+  description: Event bus service for pandemic system
+  author: Pandemic Team
+
+execution:
+  command: pandemic-event-daemon
+  restart: always
+  restartSec: 5
+
+systemd:
+  user: pandemic
+  group: pandemic
+  workingDirectory: /opt/pandemic/infections/pandemic-event-bus
+
+resources:
+  memoryLimit: 128MB
+  cpuQuota: 50%
+
+environment:
+  PANDEMIC_SOCKET_PATH: /var/run/pandemic/event-bus.sock
+  PANDEMIC_EVENTS_DIR: /var/run/pandemic/events
+  PANDEMIC_LOG_LEVEL: INFO
