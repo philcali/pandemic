@@ -59,6 +59,9 @@ test-rest:
 test-console:
 	cd packages/pandemic-console && pytest
 
+test-systemd:
+	cd packages/pandemic-systemd-helper && pytest
+
 # Format all code
 format:
 	@echo "🎨 Formatting code with black..."

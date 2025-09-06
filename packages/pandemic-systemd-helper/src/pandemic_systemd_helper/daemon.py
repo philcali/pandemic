@@ -1,21 +1,17 @@
-"""Privileged systemd helper daemon."""
-
 import asyncio
-import logging
+import json
 import os
-import pwd
-import signal
+import subprocess
 from pathlib import Path
 from typing import Any, Dict
 
-from pandemic_common.protocol import UDSProtocol
+from pandemic_common import UnixDaemonServer, route
 
-from .operations import SystemdOperations
 from .validator import RequestValidator
 
 
-class HelperDaemon:
-    """Privileged systemd helper daemon."""
+class HelperDaemon(UnixDaemonServer):
+    """Privileged systemd helper daemon with integrated operations."""
 
     def __init__(
         self,
@@ -23,157 +19,166 @@ class HelperDaemon:
         socket_mode: int = 660,
         socket_owner: str = "pandemic",
     ):
-        self.socket_path = socket_path
+        super().__init__(socket_path, socket_mode, socket_owner, socket_owner)
         self.validator = RequestValidator()
-        self.operations = SystemdOperations()
-        self.server = None
-        self.running = False
-        self.socket_mode = socket_mode
-        self.socket_owner = socket_owner
-        self.logger = logging.getLogger(__name__)
-        self._setup_signal_handlers()
 
-    def _setup_signal_handlers(self):
-        """Setup signal handlers for graceful shutdown."""
-
-        def signal_handler(signum, frame):
-            self.logger.info(f"Received signal {signum}, shutting down")
-            if self.running:
-                asyncio.create_task(self.stop())
-
-        signal.signal(signal.SIGTERM, signal_handler)
-        signal.signal(signal.SIGINT, signal_handler)
-
-    async def start(self):
-        """Start the helper daemon."""
+    async def on_startup(self):
+        """Startup validation."""
         if os.geteuid() != 0:
             raise RuntimeError("Helper daemon must run as root")
 
-        self.logger.info("Starting privileged systemd helper")
+    @route("createService")
+    async def create_service(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Create systemd service with template and override."""
+        self.validator.validate_request({"command": "createService", "payload": payload})
 
-        try:
-            # Ensure socket directory exists
-            socket_path = Path(self.socket_path)
-            socket_path.parent.mkdir(parents=True, exist_ok=True)
+        service_name = payload["serviceName"]
+        template_content = payload.get("templateContent", "")
+        override_config = payload.get("overrideConfig", "")
 
-            # Remove existing socket
-            if socket_path.exists():
-                socket_path.unlink()
+        self.logger.info(f"Creating service: {service_name}")
 
-            # Create Unix domain socket server
-            self.server = await asyncio.start_unix_server(
-                self._handle_client, path=str(socket_path)
+        # Create template if provided
+        if template_content:
+            template_path = Path(f"/etc/systemd/system/{service_name}")
+            template_path.write_text(template_content)
+            self.logger.info(f"Created service template: {template_path}")
+
+        # Create drop-in directory and override if provided
+        if override_config:
+            drop_in_dir = Path(f"/etc/systemd/system/{service_name}.d")
+            drop_in_dir.mkdir(parents=True, exist_ok=True)
+
+            override_file = drop_in_dir / "pandemic.conf"
+            override_file.write_text(override_config)
+            self.logger.info(f"Created override config: {override_file}")
+
+        # Reload systemd
+        await self._run_systemctl("daemon-reload")
+
+        return {"status": "success", "operation": "created"}
+
+    @route("removeService")
+    async def remove_service(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Remove systemd service and cleanup files."""
+        service_name = payload["serviceName"]
+        self.logger.info(f"Removing service: {service_name}")
+
+        # Stop and disable service first
+        await self._run_systemctl("stop", service_name)
+        await self._run_systemctl("disable", service_name)
+
+        # Remove service file
+        service_path = Path(f"/etc/systemd/system/{service_name}")
+        if service_path.exists():
+            service_path.unlink()
+
+        # Remove drop-in directory
+        drop_in_dir = Path(f"/etc/systemd/system/{service_name}.d")
+        if drop_in_dir.exists():
+            import shutil
+
+            shutil.rmtree(drop_in_dir)
+
+        # Reload systemd
+        await self._run_systemctl("daemon-reload")
+
+        return {"status": "success", "operation": "removed"}
+
+    @route("startService")
+    async def start_service(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Start systemd service."""
+        service_name = payload["serviceName"]
+        await self._run_systemctl("start", service_name)
+        return {"status": "success", "operation": "started"}
+
+    @route("stopService")
+    async def stop_service(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Stop systemd service."""
+        service_name = payload["serviceName"]
+        await self._run_systemctl("stop", service_name)
+        return {"status": "success", "operation": "stopped"}
+
+    @route("enableService")
+    async def enable_service(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Enable systemd service."""
+        service_name = payload["serviceName"]
+        await self._run_systemctl("enable", service_name)
+        return {"status": "success", "operation": "enabled"}
+
+    @route("disableService")
+    async def disable_service(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Disable systemd service."""
+        service_name = payload["serviceName"]
+        await self._run_systemctl("disable", service_name)
+        return {"status": "success", "operation": "disabled"}
+
+    @route("getStatus")
+    async def get_status(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Get systemd service status."""
+        service_name = payload["serviceName"]
+
+        result = await self._run_systemctl(
+            "show", service_name, "--property=ActiveState,SubState,MainPID,MemoryCurrent"
+        )
+
+        properties = {}
+        for line in result.stdout.strip().split("\n"):
+            if "=" in line:
+                key, value = line.split("=", 1)
+                properties[key] = value
+
+        return {
+            "status": "success",
+            "activeState": properties.get("ActiveState", "unknown"),
+            "subState": properties.get("SubState", "unknown"),
+            "pid": int(properties.get("MainPID", 0)) or None,
+            "memoryUsage": properties.get("MemoryCurrent", "0"),
+        }
+
+    @route("getLogs")
+    async def get_logs(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Get service logs from journald."""
+        service_name = payload["serviceName"]
+        lines = payload.get("lines", 100)
+
+        result = await self._run_command(
+            "journalctl", "-u", service_name, "-n", str(lines), "--output=json"
+        )
+
+        logs = []
+        for line in result.stdout.strip().split("\n"):
+            if line:
+                log_entry = json.loads(line)
+                logs.append(
+                    {
+                        "timestamp": log_entry.get("__REALTIME_TIMESTAMP", ""),
+                        "level": log_entry.get("PRIORITY", "6"),
+                        "message": log_entry.get("MESSAGE", ""),
+                    }
+                )
+
+        return {"status": "success", "logs": logs}
+
+    async def _run_systemctl(self, *args) -> subprocess.CompletedProcess:
+        """Run systemctl command."""
+        return await self._run_command("systemctl", *args)
+
+    async def _run_command(self, *args) -> subprocess.CompletedProcess:
+        """Run command asynchronously."""
+        process = await asyncio.create_subprocess_exec(
+            *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        )
+
+        stdout, stderr = await process.communicate()
+
+        result = subprocess.CompletedProcess(
+            args, process.returncode or 0, stdout.decode(), stderr.decode()
+        )
+
+        if result.returncode != 0:
+            raise subprocess.CalledProcessError(
+                result.returncode, args, result.stdout, result.stderr
             )
 
-            # Set socket permissions (readable/writable by pandemic group)
-            user_info = pwd.getpwnam(self.socket_owner)
-            os.chmod(socket_path, int(str(self.socket_mode), 8))
-            os.chown(socket_path, user_info.pw_uid, user_info.pw_gid)
-
-            self.running = True
-            self.logger.info(f"Helper daemon listening on {socket_path}")
-
-            # Start serving
-            async with self.server:
-                await self.server.serve_forever()
-
-        except Exception as e:
-            self.logger.error(f"Failed to start helper daemon: {e}")
-            await self.stop()
-            raise
-
-    async def stop(self):
-        """Stop the helper daemon."""
-        if not self.running:
-            return
-
-        self.logger.info("Stopping helper daemon")
-        self.running = False
-
-        try:
-            if self.server:
-                self.server.close()
-                await self.server.wait_closed()
-
-            # Clean up socket
-            socket_path = Path(self.socket_path)
-            if socket_path.exists():
-                socket_path.unlink()
-
-            self.logger.info("Helper daemon stopped")
-
-        except Exception as e:
-            self.logger.error(f"Error during shutdown: {e}")
-
-    async def _handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
-        """Handle client connection."""
-        client_addr = writer.get_extra_info("peername", "unknown")
-        self.logger.debug(f"Client connected: {client_addr}")
-
-        try:
-            while True:
-                # Read request using UDS protocol
-                request = await UDSProtocol.receive_message(reader)
-
-                # Process request
-                response = await self._process_request(request)
-
-                # Send response using UDS protocol
-                await UDSProtocol.send_message(writer, response)
-
-        except asyncio.IncompleteReadError:
-            pass  # Client disconnected
-        except Exception as e:
-            self.logger.error(f"Error handling client {client_addr}: {e}")
-        finally:
-            try:
-                writer.close()
-                await writer.wait_closed()
-            except Exception as e:
-                self.logger.warning(f"Error closing client connection: {e}")
-                pass
-            self.logger.debug(f"Client disconnected: {client_addr}")
-
-    async def _process_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        """Process and execute validated request."""
-        try:
-            # Validate request
-            self.validator.validate_request(request)
-
-            command = request["command"]
-            payload = request["payload"]
-
-            # Log operation for audit
-            self.logger.info(f"Executing {command} for {payload.get('serviceName', 'unknown')}")
-
-            # Execute operation
-            if command == "createService":
-                result = await self.operations.create_service(
-                    payload["serviceName"],
-                    payload.get("templateContent", ""),
-                    payload.get("overrideConfig", ""),
-                )
-            elif command == "removeService":
-                result = await self.operations.remove_service(payload["serviceName"])
-            elif command == "startService":
-                result = await self.operations.start_service(payload["serviceName"])
-            elif command == "stopService":
-                result = await self.operations.stop_service(payload["serviceName"])
-            elif command == "enableService":
-                result = await self.operations.enable_service(payload["serviceName"])
-            elif command == "disableService":
-                result = await self.operations.disable_service(payload["serviceName"])
-            elif command == "getStatus":
-                result = await self.operations.get_status(payload["serviceName"])
-            elif command == "getLogs":
-                result = await self.operations.get_logs(
-                    payload["serviceName"], payload.get("lines", 100)
-                )
-            else:
-                raise ValueError(f"Unknown command: {command}")
-
-            return result
-
-        except Exception as e:
-            self.logger.error(f"Request failed: {e}")
-            return {"status": "error", "error": str(e)}
+        return result
