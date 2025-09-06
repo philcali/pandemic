@@ -7,7 +7,6 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from pandemic_core.config import DaemonConfig
-from pandemic_core.daemon import PandemicDaemon
 from pandemic_core.state import StateManager
 
 
@@ -62,16 +61,19 @@ def mock_systemd_manager():
 
 
 @pytest.fixture
-async def daemon(test_config, monkeypatch):
-    """Daemon fixture with mocked systemd."""
+def daemon(test_config):
+    """Refactored daemon fixture with mocked systemd."""
+    from pandemic_core.daemon import PandemicDaemon
+
+    daemon = PandemicDaemon(test_config)
+
     # Mock systemd manager to avoid system calls
-    mock_systemd = MagicMock()
-    mock_systemd.create_service = AsyncMock(return_value="test.service")
-    mock_systemd.remove_service = AsyncMock()
-    mock_systemd.start_service = AsyncMock()
-    mock_systemd.stop_service = AsyncMock()
-    mock_systemd.restart_service = AsyncMock()
-    mock_systemd.get_service_status = AsyncMock(
+    daemon.systemd_manager.create_service = AsyncMock(return_value="test.service")
+    daemon.systemd_manager.remove_service = AsyncMock()
+    daemon.systemd_manager.start_service = AsyncMock()
+    daemon.systemd_manager.stop_service = AsyncMock()
+    daemon.systemd_manager.restart_service = AsyncMock()
+    daemon.systemd_manager.get_service_status = AsyncMock(
         return_value={
             "activeState": "active",
             "subState": "running",
@@ -81,10 +83,7 @@ async def daemon(test_config, monkeypatch):
             "uptime": "1h",
         }
     )
-    mock_systemd.get_service_logs = AsyncMock(return_value=[])
-
-    daemon = PandemicDaemon(test_config)
-    daemon.message_handler.systemd_manager = mock_systemd
+    daemon.systemd_manager.get_service_logs = AsyncMock(return_value=[])
 
     return daemon
 
