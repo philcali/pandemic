@@ -1,5 +1,5 @@
 # Multi-stage Dockerfile for Pandemic monorepo
-FROM node:24-alpine AS frontend-builder
+FROM node:25-alpine AS frontend-builder
 
 # Build React frontend
 WORKDIR /app/frontend
