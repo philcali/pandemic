@@ -30,7 +30,7 @@ jobs:
         bandit -s B404,B603,B607 -r packages/*/src
 
     - name: Upload security reports
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       if: always()
       with:
         name: security-reports
